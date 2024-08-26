@@ -1,4 +1,8 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using DeliverooBackend.Models;
+using Microsoft.Data.SqlClient;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 namespace DeliverooBackend.Services
@@ -15,19 +19,23 @@ namespace DeliverooBackend.Services
         {
             try
             {
-                // Recupero della stringa di connessione dal file di configurazione
+                var ruoliAccettabili = new[] { "Ospite", "Ristorante" };
+
+                if (!ruoliAccettabili.Contains(ruolo))
+                {
+                    throw new ArgumentException("Ruolo non valido. Deve essere 'Ospite' o 'Ristorante'.");
+                }
                 string connectionString = _configuration.GetConnectionString("DefaultConnection");
 
-                // Hash della password
                 string passwordHash = HashPassword(password);
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
                     const string INSERT_CMD = @"INSERT INTO Utenti 
-                                                (Nome, Cognome, Email, Telefono, Indirizzo, PasswordHash, Ruolo)
-                                                VALUES 
-                                                (@Nome, @Cognome, @Email, @Telefono, @Indirizzo, @PasswordHash, @Ruolo)";
+                                        (Nome, Cognome, Email, Telefono, Indirizzo, PasswordHash, Ruolo)
+                                        VALUES 
+                                        (@Nome, @Cognome, @Email, @Telefono, @Indirizzo, @PasswordHash, @Ruolo)";
 
                     using (SqlCommand cmd = new SqlCommand(INSERT_CMD, conn))
                     {
@@ -50,6 +58,7 @@ namespace DeliverooBackend.Services
             }
         }
 
+
         private string HashPassword(string password)
         {
             using (SHA256 sha256 = SHA256.Create())
@@ -62,6 +71,119 @@ namespace DeliverooBackend.Services
                 }
                 return builder.ToString();
             }
+        }
+
+        public Utente Login(string email, string password)
+        {
+            try
+            {
+                Console.WriteLine($"Inizio del processo di login per l'email: {email}");
+
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+                string passwordHash = HashPassword(password);
+
+                Console.WriteLine($"Password hash generato: {passwordHash}");
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    Console.WriteLine("Connessione al database aperta.");
+
+                    const string QUERY_CMD = @"SELECT * FROM Utenti WHERE Email = @Email AND PasswordHash = @PasswordHash";
+
+                    using (SqlCommand cmd = new SqlCommand(QUERY_CMD, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Email", email);
+                        cmd.Parameters.AddWithValue("@PasswordHash", passwordHash);
+
+                        Console.WriteLine("Query SQL eseguita. Inizio lettura dei dati.");
+
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                Console.WriteLine("Utente trovato nel database.");
+
+                                var user = new Utente
+                                {
+                                    ID_Utente = (int)reader["ID_Utente"],
+                                    Nome = reader["Nome"].ToString(),
+                                    Cognome = reader["Cognome"].ToString(),
+                                    Email = reader["Email"].ToString(),
+                                    Telefono = reader["Telefono"].ToString(),
+                                    Indirizzo = reader["Indirizzo"].ToString(),
+                                    Ruolo = Enum.Parse<RuoloUtente>(reader["Ruolo"].ToString())
+                                };
+
+                                Console.WriteLine("Token JWT generato.");
+
+                                user.AccessToken = GenerateJwtToken(user);
+                                user.DataScadenzaToken = DateTime.UtcNow.AddHours(3);
+
+                                Console.WriteLine("Token aggiornato nel database.");
+
+                                UpdateUserToken(user);
+
+                                return user;
+                            }
+                            else
+                            {
+                                Console.WriteLine("Nessun utente trovato con le credenziali fornite.");
+                            }
+                        }
+                    }
+                }
+                return null; 
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Errore durante il login dell'utente: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                throw; 
+            }
+        }
+
+
+        private void UpdateUserToken(Utente user)
+        {
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                const string UPDATE_CMD = @"UPDATE Utenti SET AccessToken = @AccessToken, DataScadenzaToken = @DataScadenzaToken WHERE ID_Utente = @ID_Utente";
+
+                using (SqlCommand cmd = new SqlCommand(UPDATE_CMD, conn))
+                {
+                    cmd.Parameters.AddWithValue("@AccessToken", user.AccessToken);
+                    cmd.Parameters.AddWithValue("@DataScadenzaToken", user.DataScadenzaToken);
+                    cmd.Parameters.AddWithValue("@ID_Utente", user.ID_Utente);
+
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        private string GenerateJwtToken(Utente user)
+        {
+            var key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.ID_Utente.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Ruolo.ToString())
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
+                claims: claims,
+                expires: DateTime.Now.AddHours(1),
+                signingCredentials: creds);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
     }

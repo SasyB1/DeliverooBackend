@@ -20,7 +20,7 @@ namespace DeliverooBackend.Controllers
         {
             if (request == null)
             {
-                return BadRequest("Invalid user data.");
+                return BadRequest("Richiesta non valida.");
             }
 
             try
@@ -37,11 +37,11 @@ namespace DeliverooBackend.Controllers
 
                 if (success)
                 {
-                    return Ok("User registered successfully.");
+                    return Ok("Utente registrato con successo.");
                 }
                 else
                 {
-                    return StatusCode(StatusCodes.Status500InternalServerError, "User registration failed.");
+                    return StatusCode(StatusCodes.Status500InternalServerError, "Registrazione fallita.");
                 }
             }
             catch (Exception ex)
@@ -49,7 +49,40 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"Internal server error: {ex.Message}");
             }
         }
+
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] LoginRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest("Invalid login data.");
+            }
+
+            try
+            {
+                var user = _utenteService.Login(request.Email, request.Password);
+
+                if (user == null)
+                {
+                    return Unauthorized("Invalid credentials.");
+                }
+
+                return Ok(new
+                {
+                    user.ID_Utente,
+                    user.Nome,
+                    user.Cognome,
+                    user.Email,
+                    user.Ruolo,
+                    Token = user.AccessToken,
+                    TokenExpiration = user.DataScadenzaToken
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Internal server error: {ex.Message}");
+            }
+        }
     }
+
 }
-
-
