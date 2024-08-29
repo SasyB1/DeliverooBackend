@@ -19,11 +19,11 @@ namespace DeliverooBackend.Services
         {
             try
             {
-                var ruoliAccettabili = new[] { "Ospite", "Ristorante" };
+                var ruoliAccettabili = new[] { "Ospite", "Ristoratore" };
 
                 if (!ruoliAccettabili.Contains(ruolo))
                 {
-                    throw new ArgumentException("Ruolo non valido. Deve essere 'Ospite' o 'Ristorante'.");
+                    throw new ArgumentException("Ruolo non valido. Deve essere 'Ospite' o 'Ristoratore'.");
                 }
                 string connectionString = _configuration.GetConnectionString("DefaultConnection");
 
