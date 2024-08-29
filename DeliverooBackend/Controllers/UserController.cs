@@ -20,7 +20,7 @@ namespace DeliverooBackend.Controllers
         {
             if (request == null)
             {
-                return BadRequest("Richiesta non valida.");
+                return BadRequest(new { message = "Richiesta non valida." });
             }
 
             try
@@ -37,18 +37,19 @@ namespace DeliverooBackend.Controllers
 
                 if (success)
                 {
-                    return Ok("Utente registrato con successo.");
+                    return Ok(new { message = "Utente registrato con successo." });
                 }
                 else
                 {
-                    return StatusCode(StatusCodes.Status500InternalServerError, "Registrazione fallita.");
+                    return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Registrazione fallita." });
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, $"Internal server error: {ex.Message}");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = $"Internal server error: {ex.Message}" });
             }
         }
+
 
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest request)
