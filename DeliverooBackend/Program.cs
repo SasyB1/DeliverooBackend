@@ -44,7 +44,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddScoped<UtenteService>();
+builder.Services
+    .AddScoped<RistoranteService>()
+    .AddScoped<UtenteService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

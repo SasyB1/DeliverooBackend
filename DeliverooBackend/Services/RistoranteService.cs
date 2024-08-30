@@ -51,8 +51,8 @@ namespace DeliverooBackend.Services
                                 Indirizzo = reader.GetString(2),
                                 Telefono = reader.GetString(3),
                                 Email = reader.GetString(4),
-                                Latitudine = reader.GetDouble(5),
-                                Longitudine = reader.GetDouble(6)
+                                Latitudine = Convert.ToDouble(reader.GetDecimal(5)), 
+                                Longitudine = Convert.ToDouble(reader.GetDecimal(6))
                             };
                             ristoranti.Add(ristorante);
                         }
@@ -61,6 +61,7 @@ namespace DeliverooBackend.Services
             }
             return ristoranti;
         }
+
 
         private double CalcolaDistanza(double lat1, double lon1, double lat2, double lon2)
         {
