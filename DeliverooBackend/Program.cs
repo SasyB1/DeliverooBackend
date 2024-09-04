@@ -1,5 +1,6 @@
 using DeliverooBackend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -64,6 +65,15 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors("AllowLocalhost4200");
 app.UseAuthentication();
+app.UseStaticFiles(); // Aggiungi questa linea per abilitare i file statici
+
+// Configura il percorso per la cartella uploads
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "uploads")),
+    RequestPath = "/uploads"
+});
 app.UseAuthorization();
 app.MapControllers();
 

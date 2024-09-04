@@ -38,7 +38,7 @@ public class RistoranteService
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             conn.Open();
-            string query = "SELECT ID_Ristorante, Nome, Indirizzo, Telefono, Email, Latitudine, Longitudine FROM Ristoranti";
+            string query = "SELECT ID_Ristorante, Nome, Indirizzo, Telefono, Email, Latitudine, Longitudine,ImmaginePath FROM Ristoranti";
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
                 using (SqlDataReader reader = cmd.ExecuteReader())
@@ -53,7 +53,8 @@ public class RistoranteService
                             Telefono = reader.GetString(3),
                             Email = reader.GetString(4),
                             Latitudine = reader.GetDecimal(5),
-                            Longitudine = reader.GetDecimal(6)
+                            Longitudine = reader.GetDecimal(6),
+                            ImmaginePath = reader.IsDBNull(7) ? null : reader.GetString(7)
                         };
                         ristoranti.Add(ristorante);
                     }
@@ -107,24 +108,37 @@ public class RistoranteService
         if (immagine != null && immagine.Length > 0)
         {
             string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
-            immaginePath = Path.Combine(uploadsFolder, immagine.FileName);
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(immagine.FileName);
+            immaginePath = Path.Combine(uploadsFolder, fileName);
 
             using (var fileStream = new FileStream(immaginePath, FileMode.Create))
             {
                 await immagine.CopyToAsync(fileStream);
             }
 
-            immaginePath = "/uploads/" + immagine.FileName;
+            immaginePath = "/uploads/" + fileName;
             ristorante.ImmaginePath = immaginePath;
+
+            Console.WriteLine($"Immagine salvata correttamente con il percorso: {immaginePath}");
         }
+        else
+        {
+            Console.WriteLine("Nessuna immagine caricata.");
+        }
+
 
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             await conn.OpenAsync();
             string query = @"
-            INSERT INTO Ristoranti (Nome, Indirizzo, Telefono, Email, ID_Utente, Latitudine, Longitudine, ImmaginePath)
-            VALUES (@Nome, @Indirizzo, @Telefono, @Email, @ID_Utente, @Latitudine, @Longitudine, @ImmaginePath);
-            SELECT SCOPE_IDENTITY();"; 
+        INSERT INTO Ristoranti (Nome, Indirizzo, Telefono, Email, ID_Utente, Latitudine, Longitudine, ImmaginePath)
+        VALUES (@Nome, @Indirizzo, @Telefono, @Email, @ID_Utente, @Latitudine, @Longitudine, @ImmaginePath);
+        SELECT SCOPE_IDENTITY();";
 
             int newId;
 
@@ -144,6 +158,7 @@ public class RistoranteService
             }
 
             ristorante.ID_Ristorante = newId;
+            Console.WriteLine($"Ristorante creato con ID: {newId} e immaginePath: {ristorante.ImmaginePath}");
             if (ristorante.ID_Ristorante > 0)
             {
                 await InserisciOrariApertura(conn, ristorante.ID_Ristorante, ristorante.OrariApertura);
@@ -154,6 +169,7 @@ public class RistoranteService
             }
         }
     }
+
 
 
 
@@ -184,4 +200,5 @@ public class RistoranteService
             }
         }
     }
+   
 }
