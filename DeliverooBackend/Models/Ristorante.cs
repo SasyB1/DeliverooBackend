@@ -8,8 +8,8 @@
         public string Telefono { get; set; }
         public string Email { get; set; }
         public int ID_Utente { get; set; }
-        public double Latitudine { get; set; }
-        public double Longitudine { get; set; }
+        public decimal Latitudine { get; set; }
+        public decimal Longitudine { get; set; }
         public List<OrarioApertura> OrariApertura { get; set; }
         public string? ImmaginePath { get; set; }
     }

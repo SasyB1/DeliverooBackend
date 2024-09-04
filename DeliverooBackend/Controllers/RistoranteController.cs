@@ -3,6 +3,7 @@ using DeliverooBackend.Services;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace DeliverooBackend.Controllers
 {
@@ -17,26 +18,54 @@ namespace DeliverooBackend.Controllers
         }
 
         [HttpGet("vicini")]
-        public ActionResult<List<Ristorante>> GetRistorantiVicini(double latitudine, double longitudine, double distanzaMassimaKm)
+        public ActionResult<List<Ristorante>> GetRistorantiVicini(decimal latitudine, decimal longitudine, decimal distanzaMassimaKm)
         {
             var ristorantiVicini = _ristoranteService.GetRistorantiVicini(latitudine, longitudine, distanzaMassimaKm);
             return Ok(ristorantiVicini);
         }
 
         [HttpPost("crea-ristorante")]
-        public async Task<IActionResult> CreaRistorante([FromForm] Ristorante ristorante, [FromForm] IFormFile immagine)
+        public async Task<IActionResult> CreaRistorante([FromForm] string nome, [FromForm] string indirizzo, [FromForm] string telefono,
+                                                   [FromForm] string email, [FromForm] int id_Utente, [FromForm] string latitudine,
+                                                   [FromForm] string longitudine, [FromForm] string orariApertura,
+                                                   [FromForm] IFormFile immagine)
         {
-            if (ristorante == null)
+            if (string.IsNullOrEmpty(nome) || string.IsNullOrEmpty(orariApertura))
             {
                 return BadRequest("I dati del ristorante sono mancanti.");
             }
 
-            Console.WriteLine($"Nome: {ristorante.Nome}");
-            Console.WriteLine($"Orari Apertura: {string.Join(", ", ristorante.OrariApertura.Select(o => $"{o.GiornoSettimana}: {o.OraApertura}-{o.OraChiusura}"))}");
+            if (!decimal.TryParse(latitudine, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal lat) ||
+                !decimal.TryParse(longitudine, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal lon))
+            {
+                return BadRequest("Coordinate non valide.");
+            }
 
-            await _ristoranteService.CreaRistorante(ristorante, immagine);
+            var ristorante = new Ristorante
+            {
+                Nome = nome,
+                Indirizzo = indirizzo,
+                Telefono = telefono,
+                Email = email,
+                ID_Utente = id_Utente,
+                Latitudine = lat,
+                Longitudine = lon,
+                OrariApertura = JsonConvert.DeserializeObject<List<OrarioApertura>>(orariApertura)
+            };
+
+            try
+            {
+                await _ristoranteService.CreaRistorante(ristorante, immagine);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Errore interno del server: {ex.Message}");
+            }
+
             return Ok(ristorante);
         }
+
+
     }
 }
 

@@ -13,14 +13,14 @@ public class RistoranteService
         _environment = environment;
     }
 
-    public List<Ristorante> GetRistorantiVicini(double latitudineUtente, double longitudineUtente, double distanzaMassimaKm)
+    public List<Ristorante> GetRistorantiVicini(decimal latitudineUtente, decimal longitudineUtente, decimal distanzaMassimaKm)
     {
         var ristoranti = RecuperaRistorantiDalDatabase();
         var ristorantiVicini = new List<Ristorante>();
 
         foreach (var ristorante in ristoranti)
         {
-            double distanza = CalcolaDistanza(latitudineUtente, longitudineUtente, ristorante.Latitudine, ristorante.Longitudine);
+            decimal distanza = CalcolaDistanza(latitudineUtente, longitudineUtente, ristorante.Latitudine, ristorante.Longitudine);
             if (distanza <= distanzaMassimaKm)
             {
                 ristorantiVicini.Add(ristorante);
@@ -29,6 +29,7 @@ public class RistoranteService
 
         return ristorantiVicini;
     }
+
 
     private List<Ristorante> RecuperaRistorantiDalDatabase()
     {
@@ -51,8 +52,8 @@ public class RistoranteService
                             Indirizzo = reader.GetString(2),
                             Telefono = reader.GetString(3),
                             Email = reader.GetString(4),
-                            Latitudine = Convert.ToDouble(reader.GetDecimal(5)),
-                            Longitudine = Convert.ToDouble(reader.GetDecimal(6))
+                            Latitudine = reader.GetDecimal(5),
+                            Longitudine = reader.GetDecimal(6)
                         };
                         ristoranti.Add(ristorante);
                     }
@@ -63,19 +64,28 @@ public class RistoranteService
     }
 
 
-    private double CalcolaDistanza(double lat1, double lon1, double lat2, double lon2)
+    public decimal CalcolaDistanza(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
     {
-        const double RaggioTerraKm = 6371.0;
-        double dLat = GradiARadianti(lat2 - lat1);
-        double dLon = GradiARadianti(lon2 - lon1);
+        decimal lat1Rad = lat1 * (decimal)Math.PI / 180;
+        decimal lon1Rad = lon1 * (decimal)Math.PI / 180;
+        decimal lat2Rad = lat2 * (decimal)Math.PI / 180;
+        decimal lon2Rad = lon2 * (decimal)Math.PI / 180;
 
-        double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                   Math.Cos(GradiARadianti(lat1)) * Math.Cos(GradiARadianti(lat2)) *
-                   Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        // Formula di Haversine
+        decimal dLat = lat2Rad - lat1Rad;
+        decimal dLon = lon2Rad - lon1Rad;
 
-        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-        return RaggioTerraKm * c;
+        decimal a = (decimal)Math.Sin((double)dLat / 2) * (decimal)Math.Sin((double)dLat / 2) +
+                    (decimal)Math.Cos((double)lat1Rad) * (decimal)Math.Cos((double)lat2Rad) *
+                    (decimal)Math.Sin((double)dLon / 2) * (decimal)Math.Sin((double)dLon / 2);
+
+        decimal c = 2 * (decimal)Math.Atan2((double)Math.Sqrt((double)a), (double)Math.Sqrt((double)(1 - a)));
+
+        decimal r = 6371;
+
+        return r * c;
     }
+
 
     private double GradiARadianti(double gradi)
     {
