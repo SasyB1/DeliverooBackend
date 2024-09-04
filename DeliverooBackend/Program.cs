@@ -6,14 +6,19 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]);
+var keyString = jwtSettings["Key"];
+if (string.IsNullOrEmpty(keyString))
+{
+    throw new ArgumentNullException("La chiave JWT non può essere null o vuota.");
+}
+var key = Encoding.ASCII.GetBytes(keyString);
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowLocalhost4200",
         builder =>
         {
-            builder.WithOrigins("http://localhost:4200") 
+            builder.WithOrigins("http://localhost:4200")
                    .AllowAnyHeader()
                    .AllowAnyMethod();
         });

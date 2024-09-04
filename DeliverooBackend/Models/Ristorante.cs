@@ -10,5 +10,7 @@
         public int ID_Utente { get; set; }
         public double Latitudine { get; set; }
         public double Longitudine { get; set; }
+        public List<OrarioApertura> OrariApertura { get; set; }
+        public string? ImmaginePath { get; set; }
     }
 }
