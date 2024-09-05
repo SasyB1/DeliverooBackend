@@ -30,7 +30,6 @@ namespace DeliverooBackend.Controllers
                     request.Cognome,
                     request.Email,
                     request.Telefono,
-                    request.Indirizzo,
                     request.Password,
                     request.Ruolo
                 );
@@ -84,6 +83,57 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"Internal server error: {ex.Message}");
             }
         }
-    }
 
+        
+        [HttpPut("update/{id}")]
+        public IActionResult UpdateUser(int id, [FromBody] RegisterRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Richiesta non valida." });
+            }
+
+            try
+            {
+                bool success = _utenteService.UpdateUser(id, request.Nome, request.Cognome, request.Telefono, request.Email, request.Ruolo, request.Password);
+
+                if (success)
+                {
+                    return Ok(new { message = "Utente modificato con successo." });
+                }
+                else
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Modifica utente fallita." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = $"Internal server error: {ex.Message}" });
+            }
+        }
+
+
+
+        [HttpDelete("delete/{id}")]
+        public IActionResult DeleteUser(int id)
+        {
+            try
+            {
+                bool success = _utenteService.DeleteUser(id);
+
+                if (success)
+                {
+                    return Ok(new { message = "Utente eliminato con successo." });
+                }
+                else
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Eliminazione utente fallita." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = $"Internal server error: {ex.Message}" });
+            }
+        }
+    }
 }

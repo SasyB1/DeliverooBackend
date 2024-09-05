@@ -5,6 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+
 namespace DeliverooBackend.Services
 {
     public class UtenteService
@@ -15,7 +16,9 @@ namespace DeliverooBackend.Services
         {
             _configuration = configuration;
         }
-        public bool Register(string nome, string cognome, string email, string telefono, string indirizzo, string password, string ruolo)
+
+        
+        public bool Register(string nome, string cognome, string email, string telefono, string password, string ruolo)
         {
             try
             {
@@ -25,17 +28,17 @@ namespace DeliverooBackend.Services
                 {
                     throw new ArgumentException("Ruolo non valido. Deve essere 'Ospite' o 'Ristoratore'.");
                 }
-                string connectionString = _configuration.GetConnectionString("DefaultConnection");
 
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
                 string passwordHash = HashPassword(password);
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
                     const string INSERT_CMD = @"INSERT INTO Utenti 
-                                        (Nome, Cognome, Email, Telefono, Indirizzo, PasswordHash, Ruolo)
-                                        VALUES 
-                                        (@Nome, @Cognome, @Email, @Telefono, @Indirizzo, @PasswordHash, @Ruolo)";
+                                                (Nome, Cognome, Email, Telefono, PasswordHash, Ruolo)
+                                                VALUES 
+                                                (@Nome, @Cognome, @Email, @Telefono, @PasswordHash, @Ruolo)";
 
                     using (SqlCommand cmd = new SqlCommand(INSERT_CMD, conn))
                     {
@@ -43,7 +46,6 @@ namespace DeliverooBackend.Services
                         cmd.Parameters.AddWithValue("@Cognome", cognome);
                         cmd.Parameters.AddWithValue("@Email", email);
                         cmd.Parameters.AddWithValue("@Telefono", telefono);
-                        cmd.Parameters.AddWithValue("@Indirizzo", indirizzo);
                         cmd.Parameters.AddWithValue("@PasswordHash", passwordHash);
                         cmd.Parameters.AddWithValue("@Ruolo", ruolo);
 
@@ -57,7 +59,6 @@ namespace DeliverooBackend.Services
                 throw new Exception("Errore durante la registrazione dell'utente", ex);
             }
         }
-
 
         private string HashPassword(string password)
         {
@@ -73,6 +74,7 @@ namespace DeliverooBackend.Services
             }
         }
 
+        
         public Utente Login(string email, string password)
         {
             try
@@ -111,7 +113,6 @@ namespace DeliverooBackend.Services
                                     Cognome = reader["Cognome"].ToString(),
                                     Email = reader["Email"].ToString(),
                                     Telefono = reader["Telefono"].ToString(),
-                                    Indirizzo = reader["Indirizzo"].ToString(),
                                     Ruolo = Enum.Parse<RuoloUtente>(reader["Ruolo"].ToString())
                                 };
 
@@ -133,16 +134,15 @@ namespace DeliverooBackend.Services
                         }
                     }
                 }
-                return null; 
+                return null;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Errore durante il login dell'utente: {ex.Message}");
                 Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-                throw; 
+                throw;
             }
         }
-
 
         private void UpdateUserToken(Utente user)
         {
@@ -186,5 +186,88 @@ namespace DeliverooBackend.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
+       
+        public bool UpdateUser(int idUtente, string nome, string cognome, string telefono, string email, string ruolo, string password = null)
+        {
+            try
+            {
+                string[] ruoliAccettabili = { "Ospite", "Ristoratore", "Admin" };
+
+                if (!ruoliAccettabili.Contains(ruolo))
+                {
+                    throw new ArgumentException("Ruolo non valido. Deve essere 'Ospite', 'Ristoratore' o 'Admin'.");
+                }
+
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    string UPDATE_CMD = @"UPDATE Utenti 
+                                  SET Nome = @Nome, Cognome = @Cognome, Telefono = @Telefono, Email = @Email, Ruolo = @Ruolo";
+
+                   
+                    if (!string.IsNullOrEmpty(password))
+                    {
+                        string passwordHash = HashPassword(password); 
+                        UPDATE_CMD += ", PasswordHash = @PasswordHash";
+                    }
+
+                    UPDATE_CMD += " WHERE ID_Utente = @ID_Utente";
+
+                    using (SqlCommand cmd = new SqlCommand(UPDATE_CMD, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@ID_Utente", idUtente);
+                        cmd.Parameters.AddWithValue("@Nome", nome);
+                        cmd.Parameters.AddWithValue("@Cognome", cognome);
+                        cmd.Parameters.AddWithValue("@Telefono", telefono);
+                        cmd.Parameters.AddWithValue("@Email", email);
+                        cmd.Parameters.AddWithValue("@Ruolo", ruolo);
+
+                        
+                        if (!string.IsNullOrEmpty(password))
+                        {
+                            string passwordHash = HashPassword(password);
+                            cmd.Parameters.AddWithValue("@PasswordHash", passwordHash);
+                        }
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        return rowsAffected > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Errore durante la modifica dell'utente", ex);
+            }
+        }
+
+
+
+        public bool DeleteUser(int idUtente)
+        {
+            try
+            {
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    const string DELETE_CMD = @"DELETE FROM Utenti WHERE ID_Utente = @ID_Utente";
+
+                    using (SqlCommand cmd = new SqlCommand(DELETE_CMD, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@ID_Utente", idUtente);
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        return rowsAffected > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Errore durante l'eliminazione dell'utente", ex);
+            }
+        }
     }
 }
