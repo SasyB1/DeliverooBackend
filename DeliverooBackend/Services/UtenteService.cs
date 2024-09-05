@@ -186,16 +186,25 @@ namespace DeliverooBackend.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-       
-        public bool UpdateUser(int idUtente, string nome, string cognome, string telefono, string email, string ruolo, string password = null)
+
+        public bool UpdateUser(int idUtente, string nome, string cognome, string telefono, string email, string ruolo, string password)
         {
             try
             {
+                Console.WriteLine($"Aggiornamento per ID Utente: {idUtente}, Nome: {nome}, Cognome: {cognome}, Email: {email}, Telefono: {telefono}, Ruolo: {ruolo}");
+
                 string[] ruoliAccettabili = { "Ospite", "Ristoratore", "Admin" };
 
+               
                 if (!ruoliAccettabili.Contains(ruolo))
                 {
                     throw new ArgumentException("Ruolo non valido. Deve essere 'Ospite', 'Ristoratore' o 'Admin'.");
+                }
+
+                
+                if (string.IsNullOrEmpty(password))
+                {
+                    throw new ArgumentException("La password è obbligatoria e non può essere vuota.");
                 }
 
                 string connectionString = _configuration.GetConnectionString("DefaultConnection");
@@ -203,33 +212,24 @@ namespace DeliverooBackend.Services
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
+
                     string UPDATE_CMD = @"UPDATE Utenti 
-                                  SET Nome = @Nome, Cognome = @Cognome, Telefono = @Telefono, Email = @Email, Ruolo = @Ruolo";
-
-                   
-                    if (!string.IsNullOrEmpty(password))
-                    {
-                        string passwordHash = HashPassword(password); 
-                        UPDATE_CMD += ", PasswordHash = @PasswordHash";
-                    }
-
-                    UPDATE_CMD += " WHERE ID_Utente = @ID_Utente";
+                                  SET Nome = @Nome, Cognome = @Cognome, Telefono = @Telefono, Email = @Email, Ruolo = @Ruolo, PasswordHash = @PasswordHash
+                                  WHERE ID_Utente = @ID_Utente";
 
                     using (SqlCommand cmd = new SqlCommand(UPDATE_CMD, conn))
                     {
+                       
+                        string passwordHash = HashPassword(password);
+
+                       
                         cmd.Parameters.AddWithValue("@ID_Utente", idUtente);
                         cmd.Parameters.AddWithValue("@Nome", nome);
                         cmd.Parameters.AddWithValue("@Cognome", cognome);
                         cmd.Parameters.AddWithValue("@Telefono", telefono);
                         cmd.Parameters.AddWithValue("@Email", email);
                         cmd.Parameters.AddWithValue("@Ruolo", ruolo);
-
-                        
-                        if (!string.IsNullOrEmpty(password))
-                        {
-                            string passwordHash = HashPassword(password);
-                            cmd.Parameters.AddWithValue("@PasswordHash", passwordHash);
-                        }
+                        cmd.Parameters.AddWithValue("@PasswordHash", passwordHash);
 
                         int rowsAffected = cmd.ExecuteNonQuery();
                         return rowsAffected > 0;
@@ -240,6 +240,42 @@ namespace DeliverooBackend.Services
             {
                 throw new Exception("Errore durante la modifica dell'utente", ex);
             }
+        }
+
+
+
+
+        public Utente GetUserById(int idUtente)
+        {
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                const string QUERY_CMD = @"SELECT * FROM Utenti WHERE ID_Utente = @ID_Utente";
+
+                using (SqlCommand cmd = new SqlCommand(QUERY_CMD, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ID_Utente", idUtente);
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return new Utente
+                            {
+                                ID_Utente = (int)reader["ID_Utente"],
+                                Nome = reader["Nome"].ToString(),
+                                Cognome = reader["Cognome"].ToString(),
+                                Email = reader["Email"].ToString(),
+                                Telefono = reader["Telefono"].ToString(),
+                                Ruolo = Enum.Parse<RuoloUtente>(reader["Ruolo"].ToString())
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
         }
 
 

@@ -84,7 +84,7 @@ namespace DeliverooBackend.Controllers
             }
         }
 
-        
+
         [HttpPut("update/{id}")]
         public IActionResult UpdateUser(int id, [FromBody] RegisterRequest request)
         {
@@ -93,13 +93,28 @@ namespace DeliverooBackend.Controllers
                 return BadRequest(new { message = "Richiesta non valida." });
             }
 
+           
+            if (string.IsNullOrEmpty(request.Password))
+            {
+                return BadRequest(new { message = "La password è obbligatoria." });
+            }
+
             try
             {
+               
                 bool success = _utenteService.UpdateUser(id, request.Nome, request.Cognome, request.Telefono, request.Email, request.Ruolo, request.Password);
 
                 if (success)
                 {
-                    return Ok(new { message = "Utente modificato con successo." });
+                   
+                    var updatedUser = _utenteService.GetUserById(id); 
+                    if (updatedUser == null)
+                    {
+                        return NotFound(new { message = "Utente non trovato." });
+                    }
+
+                    
+                    return Ok(updatedUser);
                 }
                 else
                 {
@@ -108,9 +123,12 @@ namespace DeliverooBackend.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = $"Internal server error: {ex.Message}" });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = $"Errore interno del server: {ex.Message}" });
             }
         }
+
+
+
 
 
 
