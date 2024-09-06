@@ -200,5 +200,40 @@ public class RistoranteService
             }
         }
     }
-   
+    public List<Ristorante> GetRestaurantsByUserId(int iD_Utente)
+    {
+        var ristoranti = new List<Ristorante>();
+
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            conn.Open();
+            string query = "SELECT ID_Ristorante, Nome, Indirizzo, Telefono, Email, Latitudine, Longitudine, ImmaginePath FROM Ristoranti WHERE ID_Utente = @ID_Utente";
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Utente", iD_Utente);
+
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var ristorante = new Ristorante
+                        {
+                            ID_Ristorante = reader.GetInt32(0),
+                            Nome = reader.GetString(1),
+                            Indirizzo = reader.GetString(2),
+                            Telefono = reader.GetString(3),
+                            Email = reader.GetString(4),
+                            Latitudine = reader.GetDecimal(5),
+                            Longitudine = reader.GetDecimal(6),
+                            ImmaginePath = reader.IsDBNull(7) ? null : reader.GetString(7)
+                        };
+                        ristoranti.Add(ristorante);
+                    }
+                }
+            }
+        }
+
+        return ristoranti;
+    }
+
 }

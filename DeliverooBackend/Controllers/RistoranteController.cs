@@ -65,7 +65,16 @@ namespace DeliverooBackend.Controllers
             return Ok(ristorante);
         }
 
-
+        [HttpGet("GetRestaurantsByUser/{iD_Utente}")]
+        public IActionResult GetRestaurantsByUser(int iD_Utente)
+        {
+            var restaurants = _ristoranteService.GetRestaurantsByUserId(iD_Utente);
+            if (restaurants == null || !restaurants.Any())
+            {
+                return NotFound("Nessun ristorante trovato per l'utente.");
+            }
+            return Ok(restaurants);
+        }
     }
 }
 
