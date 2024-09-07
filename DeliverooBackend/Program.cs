@@ -66,9 +66,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors("AllowLocalhost4200");
 app.UseAuthentication();
-app.UseStaticFiles(); // Aggiungi questa linea per abilitare i file statici
+app.UseStaticFiles(); 
 
-// Configura il percorso per la cartella uploads
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(

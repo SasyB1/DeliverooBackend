@@ -119,7 +119,7 @@ namespace DeliverooBackend.Services
                                 Console.WriteLine("Token JWT generato.");
 
                                 user.AccessToken = GenerateJwtToken(user);
-                                user.DataScadenzaToken = DateTime.UtcNow.AddHours(3);
+                                user.DataScadenzaToken = DateTime.UtcNow.AddHours(24);
 
                                 Console.WriteLine("Token aggiornato nel database.");
 
