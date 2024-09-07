@@ -251,22 +251,46 @@ public class RistoranteService
         }
     }
 
-    public async Task CreaPiatto(Piatto piatto)
+    public async Task CreaPiatto(Piatto piatto, IFormFile immagine)
     {
+        string immaginePath = null;
+
+        if (immagine != null && immagine.Length > 0)
+        {
+            string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(immagine.FileName);
+            immaginePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var fileStream = new FileStream(immaginePath, FileMode.Create))
+            {
+                await immagine.CopyToAsync(fileStream);
+            }
+
+            immaginePath = "/uploads/" + fileName;
+            piatto.ImmaginePath = immaginePath;
+        }
+
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             await conn.OpenAsync();
-            string query = "INSERT INTO Piatti (Nome, Descrizione, Prezzo, ID_Menu) VALUES (@Nome, @Descrizione, @Prezzo, @ID_Menu)";
+            string query = "INSERT INTO Piatti (Nome, Descrizione, Prezzo, ID_Menu, ImmaginePath) VALUES (@Nome, @Descrizione, @Prezzo, @ID_Menu, @ImmaginePath)";
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
                 cmd.Parameters.AddWithValue("@Nome", piatto.Nome);
                 cmd.Parameters.AddWithValue("@Descrizione", piatto.Descrizione);
                 cmd.Parameters.AddWithValue("@Prezzo", piatto.Prezzo);
                 cmd.Parameters.AddWithValue("@ID_Menu", piatto.ID_Menu);
+                cmd.Parameters.AddWithValue("@ImmaginePath", (object)piatto.ImmaginePath ?? DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
         }
     }
+
 
 
     public List<Menu> GetMenusByRestaurantId(int idRistorante)
@@ -302,7 +326,7 @@ public class RistoranteService
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             conn.Open();
-            string query = "SELECT ID_Piatto, Nome, Descrizione, Prezzo FROM Piatti WHERE ID_Menu = @ID_Menu";
+            string query = "SELECT ID_Piatto, Nome, Descrizione, Prezzo, ImmaginePath FROM Piatti WHERE ID_Menu = @ID_Menu";
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
                 cmd.Parameters.AddWithValue("@ID_Menu", idMenu);
@@ -315,7 +339,8 @@ public class RistoranteService
                             ID_Piatto = reader.GetInt32(0),
                             Nome = reader.GetString(1),
                             Descrizione = reader.GetString(2),
-                            Prezzo = reader.GetDecimal(3)
+                            Prezzo = reader.GetDecimal(3),
+                            ImmaginePath = reader.IsDBNull(4) ? null : reader.GetString(4)
                         };
                         piatti.Add(piatto);
                     }
@@ -324,5 +349,6 @@ public class RistoranteService
         }
         return piatti;
     }
+
 
 }

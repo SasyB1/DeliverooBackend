@@ -100,7 +100,7 @@ namespace DeliverooBackend.Controllers
             }
         }
         [HttpPost("create-piatto")]
-        public async Task<IActionResult> CreatePiatto([FromForm] string nome, [FromForm] string descrizione, [FromForm] decimal prezzo, [FromForm] int idMenu)
+        public async Task<IActionResult> CreatePiatto([FromForm] string nome, [FromForm] string descrizione, [FromForm] decimal prezzo, [FromForm] int idMenu, [FromForm] IFormFile immagine)
         {
             if (string.IsNullOrEmpty(nome) || string.IsNullOrEmpty(descrizione) || prezzo <= 0)
             {
@@ -117,7 +117,7 @@ namespace DeliverooBackend.Controllers
 
             try
             {
-                await _ristoranteService.CreaPiatto(piatto);
+                await _ristoranteService.CreaPiatto(piatto, immagine);
                 return Ok(piatto);
             }
             catch (Exception ex)
@@ -125,6 +125,7 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(500, $"Errore interno del server: {ex.Message}");
             }
         }
+
 
         [HttpGet("get-menus/{idRistorante}")]
         public IActionResult GetMenus(int idRistorante)

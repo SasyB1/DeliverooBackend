@@ -5,7 +5,8 @@
         public int ID_Piatto { get; set; } 
         public string Nome { get; set; } 
         public string Descrizione { get; set; } 
-        public decimal Prezzo { get; set; } 
-        public int ID_Menu { get; set; } 
+        public decimal Prezzo { get; set; }
+        public int ID_Menu { get; set; }
+        public string ImmaginePath { get; set; }
     }
 }
