@@ -75,6 +75,78 @@ namespace DeliverooBackend.Controllers
             }
             return Ok(restaurants);
         }
+        [HttpPost("create-menu")]
+        public async Task<IActionResult> CreateMenu([FromForm] string nome, [FromForm] int idRistorante)
+        {
+            if (string.IsNullOrEmpty(nome))
+            {
+                return BadRequest("Il nome del menu è richiesto.");
+            }
+
+            var menu = new Menu
+            {
+                Nome = nome,
+                ID_Ristorante = idRistorante
+            };
+
+            try
+            {
+                await _ristoranteService.CreaMenu(menu);
+                return Ok(menu);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Errore interno del server: {ex.Message}");
+            }
+        }
+        [HttpPost("create-piatto")]
+        public async Task<IActionResult> CreatePiatto([FromForm] string nome, [FromForm] string descrizione, [FromForm] decimal prezzo, [FromForm] int idMenu)
+        {
+            if (string.IsNullOrEmpty(nome) || string.IsNullOrEmpty(descrizione) || prezzo <= 0)
+            {
+                return BadRequest("I dati del piatto sono incompleti.");
+            }
+
+            var piatto = new Piatto
+            {
+                Nome = nome,
+                Descrizione = descrizione,
+                Prezzo = prezzo,
+                ID_Menu = idMenu
+            };
+
+            try
+            {
+                await _ristoranteService.CreaPiatto(piatto);
+                return Ok(piatto);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Errore interno del server: {ex.Message}");
+            }
+        }
+
+        [HttpGet("get-menus/{idRistorante}")]
+        public IActionResult GetMenus(int idRistorante)
+        {
+            var menus = _ristoranteService.GetMenusByRestaurantId(idRistorante);
+            if (menus == null || !menus.Any())
+            {
+                return NotFound("Nessun menu trovato per questo ristorante.");
+            }
+            return Ok(menus);
+        }
+        [HttpGet("get-piatti/{idMenu}")]
+        public IActionResult GetPiattiByMenu(int idMenu)
+        {
+            var piatti = _ristoranteService.GetPiattiByMenuId(idMenu);
+            if (piatti == null || !piatti.Any())
+            {
+                return NotFound(); 
+            }
+            return Ok(piatti);
+        }
+
     }
 }
 

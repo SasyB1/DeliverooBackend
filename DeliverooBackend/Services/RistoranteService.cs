@@ -236,4 +236,93 @@ public class RistoranteService
         return ristoranti;
     }
 
+    public async Task CreaMenu(Menu menu)
+    {
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+            string query = "INSERT INTO Menu (Nome, ID_Ristorante) VALUES (@Nome, @ID_Ristorante)";
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@Nome", menu.Nome);
+                cmd.Parameters.AddWithValue("@ID_Ristorante", menu.ID_Ristorante);
+                await cmd.ExecuteNonQueryAsync();
+            }
+        }
+    }
+
+    public async Task CreaPiatto(Piatto piatto)
+    {
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+            string query = "INSERT INTO Piatti (Nome, Descrizione, Prezzo, ID_Menu) VALUES (@Nome, @Descrizione, @Prezzo, @ID_Menu)";
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@Nome", piatto.Nome);
+                cmd.Parameters.AddWithValue("@Descrizione", piatto.Descrizione);
+                cmd.Parameters.AddWithValue("@Prezzo", piatto.Prezzo);
+                cmd.Parameters.AddWithValue("@ID_Menu", piatto.ID_Menu);
+                await cmd.ExecuteNonQueryAsync();
+            }
+        }
+    }
+
+
+    public List<Menu> GetMenusByRestaurantId(int idRistorante)
+    {
+        var menus = new List<Menu>();
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            conn.Open();
+            string query = "SELECT ID_Menu, Nome FROM Menu WHERE ID_Ristorante = @ID_Ristorante";
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var menu = new Menu
+                        {
+                            ID_Menu = reader.GetInt32(0),
+                            Nome = reader.GetString(1)
+                        };
+                        menus.Add(menu);
+                    }
+                }
+            }
+        }
+        return menus;
+    }
+
+    public List<Piatto> GetPiattiByMenuId(int idMenu)
+    {
+        var piatti = new List<Piatto>();
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            conn.Open();
+            string query = "SELECT ID_Piatto, Nome, Descrizione, Prezzo FROM Piatti WHERE ID_Menu = @ID_Menu";
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Menu", idMenu);
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var piatto = new Piatto
+                        {
+                            ID_Piatto = reader.GetInt32(0),
+                            Nome = reader.GetString(1),
+                            Descrizione = reader.GetString(2),
+                            Prezzo = reader.GetDecimal(3)
+                        };
+                        piatti.Add(piatto);
+                    }
+                }
+            }
+        }
+        return piatti;
+    }
+
 }
