@@ -350,18 +350,27 @@ public class RistoranteService
         return piatti;
     }
 
-    public async Task AddCategoriesToRestaurant(int idRistorante, List<int> categoryIds)
+    public async Task AggiornaCategorieRistorante(int idRistorante, List<int> selectedCategories)
     {
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             await conn.OpenAsync();
+            string deleteQuery = @"
+        DELETE FROM RistoranteCategorie
+        WHERE ID_Ristorante = @ID_Ristorante
+        AND ID_Categoria NOT IN (" + string.Join(",", selectedCategories) + ")";
 
-            foreach (var categoryId in categoryIds)
+            using (SqlCommand deleteCmd = new SqlCommand(deleteQuery, conn))
+            {
+                deleteCmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+                await deleteCmd.ExecuteNonQueryAsync();
+            }
+            foreach (var categoryId in selectedCategories)
             {
                 string checkQuery = @"
-                SELECT COUNT(*)
-                FROM RistoranteCategorie
-                WHERE ID_Ristorante = @ID_Ristorante AND ID_Categoria = @ID_Categoria";
+            SELECT COUNT(*)
+            FROM RistoranteCategorie
+            WHERE ID_Ristorante = @ID_Ristorante AND ID_Categoria = @ID_Categoria";
 
                 using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
                 {
@@ -372,8 +381,8 @@ public class RistoranteService
                     if (count == 0)
                     {
                         string insertQuery = @"
-                        INSERT INTO RistoranteCategorie (ID_Ristorante, ID_Categoria)
-                        VALUES (@ID_Ristorante, @ID_Categoria)";
+                    INSERT INTO RistoranteCategorie (ID_Ristorante, ID_Categoria)
+                    VALUES (@ID_Ristorante, @ID_Categoria)";
 
                         using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn))
                         {
@@ -386,6 +395,8 @@ public class RistoranteService
             }
         }
     }
+
+
 
     public List<Categoria> GetCategorie()
     {

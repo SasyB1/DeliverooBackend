@@ -148,24 +148,31 @@ namespace DeliverooBackend.Controllers
             return Ok(piatti);
         }
 
-        [HttpPost("aggiungi-categorie")]
-        public async Task<IActionResult> AddCategoriesToRestaurant([FromForm] int idRistorante, [FromForm] List<int> categoryIds)
+        [HttpPost("aggiorna-categorie")]
+        public async Task<IActionResult> AggiornaCategorieRistorante([FromForm] int idRistorante, [FromForm] string categoryIds)
         {
-            if (categoryIds == null || !categoryIds.Any())
+            if (string.IsNullOrEmpty(categoryIds))
             {
                 return BadRequest("Nessuna categoria selezionata.");
             }
 
+            List<int> selectedCategories = JsonConvert.DeserializeObject<List<int>>(categoryIds);
+
             try
             {
-                await _ristoranteService.AddCategoriesToRestaurant(idRistorante, categoryIds);
-                return Ok();
+                await _ristoranteService.AggiornaCategorieRistorante(idRistorante, selectedCategories);
+                return Ok(new { message = "Categorie aggiornate correttamente." });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Errore interno del server: {ex.Message}");
+                return StatusCode(500, new { error = $"Errore interno del server: {ex.Message}" });
             }
         }
+
+
+
+
+
 
         [HttpGet("categorie")]
         public IActionResult GetCategorie()
