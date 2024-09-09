@@ -169,11 +169,6 @@ namespace DeliverooBackend.Controllers
             }
         }
 
-
-
-
-
-
         [HttpGet("categorie")]
         public IActionResult GetCategorie()
         {
