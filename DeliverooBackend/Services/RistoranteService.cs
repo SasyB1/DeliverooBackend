@@ -350,5 +350,96 @@ public class RistoranteService
         return piatti;
     }
 
+    public async Task AddCategoriesToRestaurant(int idRistorante, List<int> categoryIds)
+    {
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+
+            foreach (var categoryId in categoryIds)
+            {
+                string checkQuery = @"
+                SELECT COUNT(*)
+                FROM RistoranteCategorie
+                WHERE ID_Ristorante = @ID_Ristorante AND ID_Categoria = @ID_Categoria";
+
+                using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
+                {
+                    checkCmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+                    checkCmd.Parameters.AddWithValue("@ID_Categoria", categoryId);
+
+                    var count = (int)await checkCmd.ExecuteScalarAsync();
+                    if (count == 0)
+                    {
+                        string insertQuery = @"
+                        INSERT INTO RistoranteCategorie (ID_Ristorante, ID_Categoria)
+                        VALUES (@ID_Ristorante, @ID_Categoria)";
+
+                        using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn))
+                        {
+                            insertCmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+                            insertCmd.Parameters.AddWithValue("@ID_Categoria", categoryId);
+                            await insertCmd.ExecuteNonQueryAsync();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public List<Categoria> GetCategorie()
+    {
+        var categorie = new List<Categoria>();
+
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            conn.Open();
+            string query = "SELECT ID_Categoria, Nome FROM CategorieRistoranti";
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var categoria = new Categoria
+                        {
+                            ID_Categoria = reader.GetInt32(0),
+                            Nome = reader.GetString(1)
+                        };
+                        categorie.Add(categoria);
+                    }
+                }
+            }
+        }
+        return categorie;
+    }
+    public List<int> GetCategorieAssociate(int idRistorante)
+    {
+        var categorieAssociate = new List<int>();
+
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            conn.Open();
+            string query = @"
+            SELECT ID_Categoria 
+            FROM RistoranteCategorie 
+            WHERE ID_Ristorante = @ID_Ristorante";
+
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        categorieAssociate.Add(reader.GetInt32(0));
+                    }
+                }
+            }
+        }
+
+        return categorieAssociate;
+    }
 
 }

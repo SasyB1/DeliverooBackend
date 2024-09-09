@@ -148,6 +148,48 @@ namespace DeliverooBackend.Controllers
             return Ok(piatti);
         }
 
+        [HttpPost("aggiungi-categorie")]
+        public async Task<IActionResult> AddCategoriesToRestaurant([FromForm] int idRistorante, [FromForm] List<int> categoryIds)
+        {
+            if (categoryIds == null || !categoryIds.Any())
+            {
+                return BadRequest("Nessuna categoria selezionata.");
+            }
+
+            try
+            {
+                await _ristoranteService.AddCategoriesToRestaurant(idRistorante, categoryIds);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Errore interno del server: {ex.Message}");
+            }
+        }
+
+        [HttpGet("categorie")]
+        public IActionResult GetCategorie()
+        {
+            var categorie = _ristoranteService.GetCategorie();
+            if (categorie == null || !categorie.Any())
+            {
+                return NotFound("Nessuna categoria trovata.");
+            }
+            return Ok(categorie);
+        }
+
+        [HttpGet("get-categorie-associate/{idRistorante}")]
+        public IActionResult GetCategorieAssociate(int idRistorante)
+        {
+            var categorieAssociate = _ristoranteService.GetCategorieAssociate(idRistorante);
+
+            if (categorieAssociate == null || !categorieAssociate.Any())
+            {
+                return NotFound("Nessuna categoria associata.");
+            }
+
+            return Ok(categorieAssociate);
+        }
     }
 }
 
