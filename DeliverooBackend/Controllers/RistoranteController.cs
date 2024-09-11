@@ -133,14 +133,17 @@ namespace DeliverooBackend.Controllers
             var menus = _ristoranteService.GetMenusByRestaurantId(idRistorante);
             if (menus == null || !menus.Any())
             {
-                return NotFound("Nessun menu trovato per questo ristorante.");
+                return Ok(new List<Menu>());
             }
             return Ok(menus);
         }
+
         [HttpGet("get-piatti/{idMenu}")]
         public IActionResult GetPiattiByMenu(int idMenu)
         {
-            var piatti = _ristoranteService.GetPiattiByMenuId(idMenu);
+            var piatti = _ristoranteService.GetPiattiByMenuId(idMenu)
+                                           .Where(p => !p.Cancellato) 
+                                           .ToList();
             if (piatti == null || !piatti.Any())
             {
                 return NotFound();
@@ -214,6 +217,30 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(500, new { message = "Errore interno del server.", error = ex.Message });
             }
         }
+        [HttpDelete("delete-menu/{idMenu}")]
+        public async Task<IActionResult> DeleteMenu(int idMenu)
+        {
+            try
+            {
+                bool isDeleted = await _ristoranteService.DeleteMenu(idMenu);
+
+                if (isDeleted)
+                {
+                    return Ok(new { message = "Menu e piatti associati cancellati con successo." });
+                }
+                else
+                {
+                    return NotFound(new { message = "Menu non trovato." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Errore interno del server.", error = ex.Message });
+            }
+        }
+
+
+
     }
 }
 

@@ -299,7 +299,7 @@ public class RistoranteService
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             conn.Open();
-            string query = "SELECT ID_Menu, Nome FROM Menu WHERE ID_Ristorante = @ID_Ristorante";
+            string query = "SELECT ID_Menu, Nome FROM Menu WHERE ID_Ristorante = @ID_Ristorante AND Cancellato = 0";
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
                 cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
@@ -320,13 +320,14 @@ public class RistoranteService
         return menus;
     }
 
+
     public List<Piatto> GetPiattiByMenuId(int idMenu)
     {
         var piatti = new List<Piatto>();
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             conn.Open();
-            string query = "SELECT ID_Piatto, Nome, Descrizione, Prezzo, ImmaginePath FROM Piatti WHERE ID_Menu = @ID_Menu";
+            string query = "SELECT ID_Piatto, Nome, Descrizione, Prezzo, ImmaginePath, Cancellato FROM Piatti WHERE ID_Menu = @ID_Menu";
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
                 cmd.Parameters.AddWithValue("@ID_Menu", idMenu);
@@ -340,7 +341,8 @@ public class RistoranteService
                             Nome = reader.GetString(1),
                             Descrizione = reader.GetString(2),
                             Prezzo = reader.GetDecimal(3),
-                            ImmaginePath = reader.IsDBNull(4) ? null : reader.GetString(4)
+                            ImmaginePath = reader.IsDBNull(4) ? null : reader.GetString(4),
+                            Cancellato = reader.IsDBNull(5) ? false : reader.GetBoolean(5)
                         };
                         piatti.Add(piatto);
                     }
@@ -349,6 +351,7 @@ public class RistoranteService
         }
         return piatti;
     }
+
 
     public async Task AggiornaCategorieRistorante(int idRistorante, List<int> selectedCategories)
     {
@@ -457,7 +460,7 @@ public class RistoranteService
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             await conn.OpenAsync();
-            string query = "DELETE FROM Piatti WHERE ID_Piatto = @ID_Piatto";
+            string query = "UPDATE Piatti SET Cancellato = 1 WHERE ID_Piatto = @ID_Piatto";
 
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
@@ -467,4 +470,29 @@ public class RistoranteService
             }
         }
     }
+
+    public async Task<bool> DeleteMenu(int idMenu)
+    {
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+            string updatePiattiQuery = "UPDATE Piatti SET Cancellato = 1 WHERE ID_Menu = @ID_Menu";
+            using (SqlCommand cmdUpdatePiatti = new SqlCommand(updatePiattiQuery, conn))
+            {
+                cmdUpdatePiatti.Parameters.AddWithValue("@ID_Menu", idMenu);
+                await cmdUpdatePiatti.ExecuteNonQueryAsync();
+            }
+            string updateMenuQuery = "UPDATE Menu SET Cancellato = 1 WHERE ID_Menu = @ID_Menu";
+            using (SqlCommand cmdUpdateMenu = new SqlCommand(updateMenuQuery, conn))
+            {
+                cmdUpdateMenu.Parameters.AddWithValue("@ID_Menu", idMenu);
+                int rowsAffected = await cmdUpdateMenu.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+        }
+    }
+
+
+
+
 }

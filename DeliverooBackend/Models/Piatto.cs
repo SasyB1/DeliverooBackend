@@ -8,5 +8,6 @@
         public decimal Prezzo { get; set; }
         public int ID_Menu { get; set; }
         public string ImmaginePath { get; set; }
+        public bool Cancellato { get; set; }
     }
 }
