@@ -45,9 +45,15 @@ namespace DeliverooBackend.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = $"Internal server error: {ex.Message}" });
+                if (ex.Message.Contains("Email già registrata"))
+                {
+                    return Conflict(new { message = "L'email è già registrata." });
+                }
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = $"Errore interno del server: {ex.Message}" });
             }
         }
+
 
 
         [HttpPost("login")]
@@ -64,7 +70,12 @@ namespace DeliverooBackend.Controllers
 
                 if (user == null)
                 {
-                    return Unauthorized("Invalid credentials.");
+                    bool isUserDeleted = _utenteService.IsUserDeleted(request.Email);
+                    if (isUserDeleted)
+                    {
+                        return Unauthorized(new { message = "L'account è stato eliminato." });
+                    }
+                    return Unauthorized(new { message = "Invalid credentials." });
                 }
 
                 return Ok(new
@@ -83,6 +94,7 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"Internal server error: {ex.Message}");
             }
         }
+
 
 
         [HttpPut("update/{id}")]
@@ -133,15 +145,15 @@ namespace DeliverooBackend.Controllers
 
 
         [HttpDelete("delete/{id}")]
-        public IActionResult DeleteUser(int id)
+        public async Task<IActionResult> DeleteUser(int id)
         {
             try
             {
-                bool success = _utenteService.DeleteUser(id);
+                bool success = await _utenteService.DeleteUser(id);
 
                 if (success)
                 {
-                    return Ok(new { message = "Utente eliminato con successo." });
+                    return Ok(new { message = "Utente eliminato con successo e tutti i dati correlati sono stati marcati come cancellati." });
                 }
                 else
                 {
@@ -150,8 +162,9 @@ namespace DeliverooBackend.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = $"Internal server error: {ex.Message}" });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = $"Errore interno del server: {ex.Message}" });
             }
         }
+
     }
 }

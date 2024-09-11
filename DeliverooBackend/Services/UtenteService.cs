@@ -17,7 +17,7 @@ namespace DeliverooBackend.Services
             _configuration = configuration;
         }
 
-        
+
         public bool Register(string nome, string cognome, string email, string telefono, string password, string ruolo)
         {
             try
@@ -30,15 +30,28 @@ namespace DeliverooBackend.Services
                 }
 
                 string connectionString = _configuration.GetConnectionString("DefaultConnection");
-                string passwordHash = HashPassword(password);
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
+                    const string CHECK_EMAIL_CMD = @"SELECT COUNT(1) FROM Utenti WHERE Email = @Email";
+
+                    using (SqlCommand checkEmailCmd = new SqlCommand(CHECK_EMAIL_CMD, conn))
+                    {
+                        checkEmailCmd.Parameters.AddWithValue("@Email", email);
+                        int emailCount = (int)checkEmailCmd.ExecuteScalar();
+
+                        if (emailCount > 0)
+                        {
+                            throw new Exception("Email già registrata.");
+                        }
+                    }
+                    string passwordHash = HashPassword(password);
+
                     const string INSERT_CMD = @"INSERT INTO Utenti 
-                                                (Nome, Cognome, Email, Telefono, PasswordHash, Ruolo)
-                                                VALUES 
-                                                (@Nome, @Cognome, @Email, @Telefono, @PasswordHash, @Ruolo)";
+                                        (Nome, Cognome, Email, Telefono, PasswordHash, Ruolo)
+                                        VALUES 
+                                        (@Nome, @Cognome, @Email, @Telefono, @PasswordHash, @Ruolo)";
 
                     using (SqlCommand cmd = new SqlCommand(INSERT_CMD, conn))
                     {
@@ -56,9 +69,10 @@ namespace DeliverooBackend.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("Errore durante la registrazione dell'utente", ex);
+                throw new Exception("Errore durante la registrazione dell'utente: " + ex.Message, ex);
             }
         }
+
 
         private string HashPassword(string password)
         {
@@ -74,7 +88,7 @@ namespace DeliverooBackend.Services
             }
         }
 
-        
+
         public Utente Login(string email, string password)
         {
             try
@@ -90,8 +104,7 @@ namespace DeliverooBackend.Services
                 {
                     conn.Open();
                     Console.WriteLine("Connessione al database aperta.");
-
-                    const string QUERY_CMD = @"SELECT * FROM Utenti WHERE Email = @Email AND PasswordHash = @PasswordHash";
+                    const string QUERY_CMD = @"SELECT * FROM Utenti WHERE Email = @Email AND PasswordHash = @PasswordHash AND Cancellato = 0";
 
                     using (SqlCommand cmd = new SqlCommand(QUERY_CMD, conn))
                     {
@@ -129,7 +142,7 @@ namespace DeliverooBackend.Services
                             }
                             else
                             {
-                                Console.WriteLine("Nessun utente trovato con le credenziali fornite.");
+                                Console.WriteLine("Nessun utente trovato con le credenziali fornite o l'utente è stato cancellato.");
                             }
                         }
                     }
@@ -143,6 +156,7 @@ namespace DeliverooBackend.Services
                 throw;
             }
         }
+
 
         private void UpdateUserToken(Utente user)
         {
@@ -252,7 +266,7 @@ namespace DeliverooBackend.Services
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                const string QUERY_CMD = @"SELECT * FROM Utenti WHERE ID_Utente = @ID_Utente";
+                const string QUERY_CMD = @"SELECT * FROM Utenti WHERE ID_Utente = @ID_Utente AND Cancellato = 0";
 
                 using (SqlCommand cmd = new SqlCommand(QUERY_CMD, conn))
                 {
@@ -280,7 +294,8 @@ namespace DeliverooBackend.Services
 
 
 
-        public bool DeleteUser(int idUtente)
+
+        public async Task<bool> DeleteUser(int idUtente)
         {
             try
             {
@@ -288,14 +303,30 @@ namespace DeliverooBackend.Services
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
-                    conn.Open();
-                    const string DELETE_CMD = @"DELETE FROM Utenti WHERE ID_Utente = @ID_Utente";
-
-                    using (SqlCommand cmd = new SqlCommand(DELETE_CMD, conn))
+                    await conn.OpenAsync();
+                    string updateRistorantiQuery = @"UPDATE Ristoranti SET Cancellato = 1 WHERE ID_Utente = @ID_Utente";
+                    using (SqlCommand cmdUpdateRistoranti = new SqlCommand(updateRistorantiQuery, conn))
                     {
-                        cmd.Parameters.AddWithValue("@ID_Utente", idUtente);
-
-                        int rowsAffected = cmd.ExecuteNonQuery();
+                        cmdUpdateRistoranti.Parameters.AddWithValue("@ID_Utente", idUtente);
+                        await cmdUpdateRistoranti.ExecuteNonQueryAsync();
+                    }
+                    string updateMenuQuery = @"UPDATE Menu SET Cancellato = 1 WHERE ID_Ristorante IN (SELECT ID_Ristorante FROM Ristoranti WHERE ID_Utente = @ID_Utente)";
+                    using (SqlCommand cmdUpdateMenu = new SqlCommand(updateMenuQuery, conn))
+                    {
+                        cmdUpdateMenu.Parameters.AddWithValue("@ID_Utente", idUtente);
+                        await cmdUpdateMenu.ExecuteNonQueryAsync();
+                    }
+                    string updatePiattiQuery = @"UPDATE Piatti SET Cancellato = 1 WHERE ID_Menu IN (SELECT ID_Menu FROM Menu WHERE ID_Ristorante IN (SELECT ID_Ristorante FROM Ristoranti WHERE ID_Utente = @ID_Utente))";
+                    using (SqlCommand cmdUpdatePiatti = new SqlCommand(updatePiattiQuery, conn))
+                    {
+                        cmdUpdatePiatti.Parameters.AddWithValue("@ID_Utente", idUtente);
+                        await cmdUpdatePiatti.ExecuteNonQueryAsync();
+                    }
+                    string updateUtenteQuery = @"UPDATE Utenti SET Cancellato = 1 WHERE ID_Utente = @ID_Utente";
+                    using (SqlCommand cmdUpdateUtente = new SqlCommand(updateUtenteQuery, conn))
+                    {
+                        cmdUpdateUtente.Parameters.AddWithValue("@ID_Utente", idUtente);
+                        int rowsAffected = await cmdUpdateUtente.ExecuteNonQueryAsync();
                         return rowsAffected > 0;
                     }
                 }
@@ -305,5 +336,32 @@ namespace DeliverooBackend.Services
                 throw new Exception("Errore durante l'eliminazione dell'utente", ex);
             }
         }
+        public bool IsUserDeleted(string email)
+        {
+            try
+            {
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    const string QUERY_CMD = @"SELECT COUNT(1) FROM Utenti WHERE Email = @Email AND Cancellato = 1";
+
+                    using (SqlCommand cmd = new SqlCommand(QUERY_CMD, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Email", email);
+
+                        int count = (int)cmd.ExecuteScalar();
+                        return count > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Errore durante la verifica dell'utente cancellato", ex);
+            }
+        }
+
+
     }
 }
