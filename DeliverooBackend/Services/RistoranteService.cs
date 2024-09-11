@@ -492,6 +492,24 @@ public class RistoranteService
         }
     }
 
+    public async Task<bool> AggiornaMenu(int idMenu, string nuovoNome)
+    {
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+
+            string query = "UPDATE Menu SET Nome = @Nome WHERE ID_Menu = @ID_Menu";
+
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@Nome", nuovoNome);
+                cmd.Parameters.AddWithValue("@ID_Menu", idMenu);
+
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+        }
+    }
 
 
 

@@ -239,6 +239,32 @@ namespace DeliverooBackend.Controllers
             }
         }
 
+        [HttpPut("update-menu")]
+        public async Task<IActionResult> AggiornaMenu([FromForm] int idMenu, [FromForm] string nuovoNome)
+        {
+            if (string.IsNullOrEmpty(nuovoNome))
+            {
+                return BadRequest("Il nome del menu è richiesto.");
+            }
+
+            try
+            {
+                bool success = await _ristoranteService.AggiornaMenu(idMenu, nuovoNome);
+
+                if (success)
+                {
+                    return Ok(new { message = "Menu aggiornato con successo." });
+                }
+                else
+                {
+                    return NotFound(new { message = "Menu non trovato." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Errore interno del server.", error = ex.Message });
+            }
+        }
 
 
     }
