@@ -452,5 +452,19 @@ public class RistoranteService
 
         return categorieAssociate;
     }
+    public async Task<bool> DeletePiatto(int idPiatto)
+    {
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+            string query = "DELETE FROM Piatti WHERE ID_Piatto = @ID_Piatto";
 
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Piatto", idPiatto);
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+        }
+    }
 }
