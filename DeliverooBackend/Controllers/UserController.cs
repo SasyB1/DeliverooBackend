@@ -75,7 +75,7 @@ namespace DeliverooBackend.Controllers
                     {
                         return Unauthorized(new { message = "L'account è stato eliminato." });
                     }
-                    return Unauthorized(new { message = "Invalid credentials." });
+                    return Unauthorized(new { message = "Credenziali non valide." });
                 }
 
                 return Ok(new
