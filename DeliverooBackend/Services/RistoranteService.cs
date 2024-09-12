@@ -182,15 +182,29 @@ public class RistoranteService
             return;
         }
 
-        string query = @"
-    INSERT INTO OrariApertura (ID_Ristorante, GiornoSettimana, OraApertura, OraChiusura)
-    VALUES (@ID_Ristorante, @GiornoSettimana, @OraApertura, @OraChiusura);";
-
-        using (SqlCommand cmd = new SqlCommand(query, conn))
+        foreach (var orario in orariApertura)
         {
-            foreach (var orario in orariApertura)
+            string query;
+            if (orario.ID_OrarioApertura > 0)
             {
-                cmd.Parameters.Clear();
+                query = @"
+                UPDATE OrariApertura
+                SET GiornoSettimana = @GiornoSettimana, OraApertura = @OraApertura, OraChiusura = @OraChiusura
+                WHERE ID_OrarioApertura = @ID_OrarioApertura;";
+            }
+            else
+            {
+                query = @"
+                INSERT INTO OrariApertura (ID_Ristorante, GiornoSettimana, OraApertura, OraChiusura)
+                VALUES (@ID_Ristorante, @GiornoSettimana, @OraApertura, @OraChiusura);";
+            }
+
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                if (orario.ID_OrarioApertura > 0)
+                {
+                    cmd.Parameters.AddWithValue("@ID_OrarioApertura", orario.ID_OrarioApertura);
+                }
                 cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
                 cmd.Parameters.AddWithValue("@GiornoSettimana", orario.GiornoSettimana);
                 cmd.Parameters.AddWithValue("@OraApertura", orario.OraApertura);
@@ -200,6 +214,8 @@ public class RistoranteService
             }
         }
     }
+
+
     public List<Ristorante> GetRestaurantsByUserId(int iD_Utente)
     {
         var ristoranti = new List<Ristorante>();
@@ -207,27 +223,51 @@ public class RistoranteService
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             conn.Open();
-            string query = "SELECT ID_Ristorante, Nome, Indirizzo, Telefono, Email, Latitudine, Longitudine, ImmaginePath FROM Ristoranti WHERE ID_Utente = @ID_Utente";
+            string query = @"
+        SELECT r.ID_Ristorante, r.Nome, r.Indirizzo, r.Telefono, r.Email, r.Latitudine, r.Longitudine, r.ImmaginePath,
+               oa.ID_OrarioApertura, oa.GiornoSettimana, oa.OraApertura, oa.OraChiusura
+        FROM Ristoranti r
+        LEFT JOIN OrariApertura oa ON r.ID_Ristorante = oa.ID_Ristorante
+        WHERE r.ID_Utente = @ID_Utente";
+
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
                 cmd.Parameters.AddWithValue("@ID_Utente", iD_Utente);
 
                 using (SqlDataReader reader = cmd.ExecuteReader())
                 {
+                    Ristorante currentRistorante = null;
                     while (reader.Read())
                     {
-                        var ristorante = new Ristorante
+                        int idRistorante = reader.GetInt32(0);
+                        if (currentRistorante == null || currentRistorante.ID_Ristorante != idRistorante)
                         {
-                            ID_Ristorante = reader.GetInt32(0),
-                            Nome = reader.GetString(1),
-                            Indirizzo = reader.GetString(2),
-                            Telefono = reader.GetString(3),
-                            Email = reader.GetString(4),
-                            Latitudine = reader.GetDecimal(5),
-                            Longitudine = reader.GetDecimal(6),
-                            ImmaginePath = reader.IsDBNull(7) ? null : reader.GetString(7)
-                        };
-                        ristoranti.Add(ristorante);
+                            currentRistorante = new Ristorante
+                            {
+                                ID_Ristorante = idRistorante,
+                                Nome = reader.GetString(1),
+                                Indirizzo = reader.GetString(2),
+                                Telefono = reader.GetString(3),
+                                Email = reader.GetString(4),
+                                Latitudine = reader.GetDecimal(5),
+                                Longitudine = reader.GetDecimal(6),
+                                ImmaginePath = reader.IsDBNull(7) ? null : reader.GetString(7),
+                                OrariApertura = new List<OrarioApertura>()
+                            };
+                            ristoranti.Add(currentRistorante);
+                        }
+
+                        if (!reader.IsDBNull(8))
+                        {
+                            var orarioApertura = new OrarioApertura
+                            {
+                                ID_OrarioApertura = reader.GetInt32(8), 
+                                GiornoSettimana = reader.GetInt32(9),
+                                OraApertura = reader.GetTimeSpan(10),
+                                OraChiusura = reader.GetTimeSpan(11)
+                            };
+                            currentRistorante.OrariApertura.Add(orarioApertura);
+                        }
                     }
                 }
             }
@@ -235,6 +275,8 @@ public class RistoranteService
 
         return ristoranti;
     }
+
+
 
     public async Task CreaMenu(Menu menu)
     {
@@ -566,5 +608,72 @@ public class RistoranteService
             }
         }
     }
+    public async Task<bool> AggiornaRistorante(Ristorante ristorante, IFormFile immagine)
+    {
+        using (var conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+            var queryUpdateRistorante = @"
+        UPDATE Ristoranti
+        SET Nome = @Nome, Indirizzo = @Indirizzo, Telefono = @Telefono, Email = @Email,
+            Latitudine = @Latitudine, Longitudine = @Longitudine, ImmaginePath = @ImmaginePath
+        WHERE ID_Ristorante = @ID_Ristorante";
+            string immaginePath = ristorante.ImmaginePath; 
+            if (immagine != null && immagine.Length > 0)
+            {
+                string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(immagine.FileName);
+                immaginePath = Path.Combine(uploadsFolder, fileName);
+                using (var fileStream = new FileStream(immaginePath, FileMode.Create))
+                {
+                    await immagine.CopyToAsync(fileStream);
+                }
+                immaginePath = "/uploads/" + fileName;
+            }
+
+            using (var cmd = new SqlCommand(queryUpdateRistorante, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Ristorante", ristorante.ID_Ristorante);
+                cmd.Parameters.AddWithValue("@Nome", ristorante.Nome);
+                cmd.Parameters.AddWithValue("@Indirizzo", ristorante.Indirizzo);
+                cmd.Parameters.AddWithValue("@Telefono", ristorante.Telefono);
+                cmd.Parameters.AddWithValue("@Email", ristorante.Email);
+                cmd.Parameters.AddWithValue("@Latitudine", ristorante.Latitudine);
+                cmd.Parameters.AddWithValue("@Longitudine", ristorante.Longitudine);
+                cmd.Parameters.AddWithValue("@ImmaginePath", (object)immaginePath ?? DBNull.Value); 
+
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+                if (rowsAffected == 0)
+                {
+                    return false;
+                }
+            }
+            var queryUpdateOrari = @"
+        UPDATE OrariApertura
+        SET GiornoSettimana = @GiornoSettimana, OraApertura = @OraApertura, OraChiusura = @OraChiusura
+        WHERE ID_OrarioApertura = @ID_OrarioApertura";
+
+            foreach (var orario in ristorante.OrariApertura)
+            {
+                using (var cmd = new SqlCommand(queryUpdateOrari, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ID_OrarioApertura", orario.ID_OrarioApertura);
+                    cmd.Parameters.AddWithValue("@GiornoSettimana", orario.GiornoSettimana);
+                    cmd.Parameters.AddWithValue("@OraApertura", orario.OraApertura);
+                    cmd.Parameters.AddWithValue("@OraChiusura", orario.OraChiusura);
+
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+        }
+
+        return true;
+    }
+
+
 
 }

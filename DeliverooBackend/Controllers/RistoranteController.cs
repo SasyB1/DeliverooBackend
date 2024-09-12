@@ -294,6 +294,55 @@ namespace DeliverooBackend.Controllers
             }
         }
 
+        [HttpPut("update-ristorante")]
+        public async Task<IActionResult> AggiornaRistorante([FromForm] int idRistorante, [FromForm] string nome, [FromForm] string indirizzo,
+   [FromForm] string telefono, [FromForm] string email, [FromForm] string latitudine, [FromForm] string longitudine,
+   [FromForm] string orariApertura, [FromForm] IFormFile immagine = null)
+        {
+            if (string.IsNullOrEmpty(nome) || string.IsNullOrEmpty(orariApertura))
+            {
+                return BadRequest("I dati del ristorante sono incompleti.");
+            }
+            if (!decimal.TryParse(latitudine, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal lat) ||
+                !decimal.TryParse(longitudine, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal lon))
+            {
+                return BadRequest("Coordinate non valide.");
+            }
+
+            var orariAperturaDeserializzati = JsonConvert.DeserializeObject<List<OrarioApertura>>(orariApertura);
+
+            var ristorante = new Ristorante
+            {
+                ID_Ristorante = idRistorante,
+                Nome = nome,
+                Indirizzo = indirizzo,
+                Telefono = telefono,
+                Email = email,
+                Latitudine = lat,
+                Longitudine = lon,
+                OrariApertura = orariAperturaDeserializzati
+            };
+
+            try
+            {
+                bool success = await _ristoranteService.AggiornaRistorante(ristorante, immagine);
+
+                if (success)
+                {
+                    return Ok(new { message = "Ristorante aggiornato con successo." });
+                }
+                else
+                {
+                    return NotFound(new { message = "Ristorante non trovato." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Errore interno del server.", error = ex.Message });
+            }
+        }
+
+
 
     }
 }
