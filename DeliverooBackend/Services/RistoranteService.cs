@@ -511,6 +511,60 @@ public class RistoranteService
         }
     }
 
+    public async Task<bool> AggiornaPiatto(int idPiatto, string nome, string descrizione, decimal prezzo, IFormFile immagine)
+    {
+        string immaginePath = null;
 
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+            string selectQuery = "SELECT ImmaginePath FROM Piatti WHERE ID_Piatto = @ID_Piatto";
+            using (SqlCommand selectCmd = new SqlCommand(selectQuery, conn))
+            {
+                selectCmd.Parameters.AddWithValue("@ID_Piatto", idPiatto);
+                var result = await selectCmd.ExecuteScalarAsync();
+                immaginePath = result as string;
+            }
+            if (immagine != null && immagine.Length > 0)
+            {
+                string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(immagine.FileName);
+                string newImmaginePath = Path.Combine(uploadsFolder, fileName);
+                using (var fileStream = new FileStream(newImmaginePath, FileMode.Create))
+                {
+                    await immagine.CopyToAsync(fileStream);
+                }
+
+                immaginePath = "/uploads/" + fileName; 
+
+                Console.WriteLine($"Nuova immagine salvata in: {immaginePath}");
+            }
+            else
+            {
+                Console.WriteLine("Nessuna nuova immagine fornita, mantengo l'immagine precedente.");
+            }
+            string query = @"
+            UPDATE Piatti
+            SET Nome = @Nome, Descrizione = @Descrizione, Prezzo = @Prezzo, ImmaginePath = @ImmaginePath
+            WHERE ID_Piatto = @ID_Piatto";
+
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@Nome", nome);
+                cmd.Parameters.AddWithValue("@Descrizione", descrizione);
+                cmd.Parameters.AddWithValue("@Prezzo", prezzo);
+                cmd.Parameters.AddWithValue("@ImmaginePath", immaginePath);
+                cmd.Parameters.AddWithValue("@ID_Piatto", idPiatto);
+
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+        }
+    }
 
 }

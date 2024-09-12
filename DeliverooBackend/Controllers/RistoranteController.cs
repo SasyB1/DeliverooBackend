@@ -266,6 +266,34 @@ namespace DeliverooBackend.Controllers
             }
         }
 
+        [HttpPut("update-piatto")]
+        public async Task<IActionResult> AggiornaPiatto([FromForm] int idPiatto, [FromForm] string nome, [FromForm] string descrizione,
+                                                  [FromForm] decimal prezzo, [FromForm] IFormFile immagine = null) 
+        {
+            if (string.IsNullOrEmpty(nome) || string.IsNullOrEmpty(descrizione) || prezzo <= 0)
+            {
+                return BadRequest("I dati del piatto sono incompleti.");
+            }
+
+            try
+            {
+                bool success = await _ristoranteService.AggiornaPiatto(idPiatto, nome, descrizione, prezzo, immagine);
+
+                if (success)
+                {
+                    return Ok(new { message = "Piatto aggiornato con successo." });
+                }
+                else
+                {
+                    return NotFound(new { message = "Piatto non trovato." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Errore interno del server.", error = ex.Message });
+            }
+        }
+
 
     }
 }
