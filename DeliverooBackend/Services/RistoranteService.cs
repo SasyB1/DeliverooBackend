@@ -38,7 +38,8 @@ public class RistoranteService
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             conn.Open();
-            string query = "SELECT ID_Ristorante, Nome, Indirizzo, Telefono, Email, Latitudine, Longitudine,ImmaginePath FROM Ristoranti";
+            string query = "SELECT ID_Ristorante, Nome, Indirizzo, Telefono, Email, Latitudine, Longitudine, ImmaginePath " +
+                           "FROM Ristoranti WHERE Cancellato = 0"; 
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
                 using (SqlDataReader reader = cmd.ExecuteReader())
@@ -63,6 +64,7 @@ public class RistoranteService
         }
         return ristoranti;
     }
+
 
 
     public decimal CalcolaDistanza(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
