@@ -685,6 +685,22 @@ public class RistoranteService
         return true;
     }
 
+    public async Task<bool> DeleteRistorante(int idRistorante)
+    {
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+            string query = "UPDATE Ristoranti SET Cancellato = 1 WHERE ID_Ristorante = @ID_Ristorante";
+
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+        }
+    }
 
 
 

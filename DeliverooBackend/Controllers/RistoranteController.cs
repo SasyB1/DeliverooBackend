@@ -341,6 +341,27 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(500, new { message = "Errore interno del server.", error = ex.Message });
             }
         }
+        [HttpDelete("delete-ristorante/{idRistorante}")]
+        public async Task<IActionResult> DeleteRistorante(int idRistorante)
+        {
+            try
+            {
+                bool isDeleted = await _ristoranteService.DeleteRistorante(idRistorante);
+
+                if (isDeleted)
+                {
+                    return Ok(new { message = "Ristorante eliminato con successo." });
+                }
+                else
+                {
+                    return NotFound(new { message = "Ristorante non trovato." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Errore interno del server.", error = ex.Message });
+            }
+        }
 
 
 
