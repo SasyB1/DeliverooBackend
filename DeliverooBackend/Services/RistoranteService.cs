@@ -613,12 +613,17 @@ public class RistoranteService
         using (var conn = new SqlConnection(_connectionString))
         {
             await conn.OpenAsync();
-            var queryUpdateRistorante = @"
-        UPDATE Ristoranti
-        SET Nome = @Nome, Indirizzo = @Indirizzo, Telefono = @Telefono, Email = @Email,
-            Latitudine = @Latitudine, Longitudine = @Longitudine, ImmaginePath = @ImmaginePath
-        WHERE ID_Ristorante = @ID_Ristorante";
-            string immaginePath = ristorante.ImmaginePath; 
+            var queryGetCurrentImmaginePath = "SELECT ImmaginePath FROM Ristoranti WHERE ID_Ristorante = @ID_Ristorante";
+            using (var cmd = new SqlCommand(queryGetCurrentImmaginePath, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Ristorante", ristorante.ID_Ristorante);
+                var result = await cmd.ExecuteScalarAsync();
+                if (result != null)
+                {
+                    ristorante.ImmaginePath = result.ToString();
+                }
+            }
+            string immaginePath = ristorante.ImmaginePath;
             if (immagine != null && immagine.Length > 0)
             {
                 string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
@@ -635,6 +640,12 @@ public class RistoranteService
                 immaginePath = "/uploads/" + fileName;
             }
 
+            var queryUpdateRistorante = @"
+        UPDATE Ristoranti
+        SET Nome = @Nome, Indirizzo = @Indirizzo, Telefono = @Telefono, Email = @Email,
+            Latitudine = @Latitudine, Longitudine = @Longitudine, ImmaginePath = @ImmaginePath
+        WHERE ID_Ristorante = @ID_Ristorante";
+
             using (var cmd = new SqlCommand(queryUpdateRistorante, conn))
             {
                 cmd.Parameters.AddWithValue("@ID_Ristorante", ristorante.ID_Ristorante);
@@ -644,7 +655,7 @@ public class RistoranteService
                 cmd.Parameters.AddWithValue("@Email", ristorante.Email);
                 cmd.Parameters.AddWithValue("@Latitudine", ristorante.Latitudine);
                 cmd.Parameters.AddWithValue("@Longitudine", ristorante.Longitudine);
-                cmd.Parameters.AddWithValue("@ImmaginePath", (object)immaginePath ?? DBNull.Value); 
+                cmd.Parameters.AddWithValue("@ImmaginePath", (object)immaginePath ?? DBNull.Value);
 
                 var rowsAffected = await cmd.ExecuteNonQueryAsync();
                 if (rowsAffected == 0)
@@ -673,6 +684,7 @@ public class RistoranteService
 
         return true;
     }
+
 
 
 
