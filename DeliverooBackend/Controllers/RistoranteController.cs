@@ -363,6 +363,25 @@ namespace DeliverooBackend.Controllers
             }
         }
 
+        [HttpGet("ristoranti-per-categoria")]
+        public ActionResult<List<Ristorante>> GetRistorantiPerCategoria([FromQuery] List<int> idCategoria)
+        {
+            if (idCategoria == null || !idCategoria.Any())
+            {
+                return BadRequest("Nessuna categoria fornita.");
+            }
+
+            var ristoranti = _ristoranteService.GetRistorantiByCategorie(idCategoria);
+
+            if (ristoranti == null || !ristoranti.Any())
+            {
+                return NotFound(new { message = "Nessun ristorante trovato per le categorie selezionate." });
+            }
+
+            return Ok(ristoranti);
+        }
+
+
 
 
     }
