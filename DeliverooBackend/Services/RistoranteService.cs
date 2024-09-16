@@ -753,7 +753,161 @@ public class RistoranteService
     }
 
 
+    public RistoranteDettagli GetRistoranteDettagli(int idRistorante)
+    {
+        var ristoranteDettagli = new RistoranteDettagli();
 
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+        {
+            conn.Open();
+            string ristoranteQuery = @"
+        SELECT r.ID_Ristorante, r.Nome, r.Indirizzo, r.Telefono, r.Email, r.Latitudine, r.Longitudine, r.ImmaginePath
+        FROM Ristoranti r
+        WHERE r.ID_Ristorante = @ID_Ristorante AND r.Cancellato = 0";
+
+            using (SqlCommand cmd = new SqlCommand(ristoranteQuery, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        ristoranteDettagli.Ristorante = new Ristorante
+                        {
+                            ID_Ristorante = reader.GetInt32(0),
+                            Nome = reader.GetString(1),
+                            Indirizzo = reader.GetString(2),
+                            Telefono = reader.GetString(3),
+                            Email = reader.GetString(4),
+                            Latitudine = reader.GetDecimal(5),
+                            Longitudine = reader.GetDecimal(6),
+                            ImmaginePath = reader.IsDBNull(7) ? null : reader.GetString(7),
+                            OrariApertura = new List<OrarioApertura>()
+                        };
+                    }
+                }
+            }
+            string orariQuery = @"
+        SELECT oa.ID_OrarioApertura, oa.GiornoSettimana, oa.OraApertura, oa.OraChiusura
+        FROM OrariApertura oa
+        WHERE oa.ID_Ristorante = @ID_Ristorante";
+
+            using (SqlCommand cmd = new SqlCommand(orariQuery, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var orarioApertura = new OrarioApertura
+                        {
+                            ID_OrarioApertura = reader.GetInt32(0),
+                            GiornoSettimana = reader.GetInt32(1),
+                            OraApertura = reader.GetTimeSpan(2),
+                            OraChiusura = reader.GetTimeSpan(3)
+                        };
+                        ristoranteDettagli.Ristorante.OrariApertura.Add(orarioApertura);
+                    }
+                }
+            }
+            string menuQuery = @"
+        SELECT m.ID_Menu, m.Nome
+        FROM Menu m
+        WHERE m.ID_Ristorante = @ID_Ristorante AND m.Cancellato = 0";
+
+            using (SqlCommand cmd = new SqlCommand(menuQuery, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var menu = new Menu
+                        {
+                            ID_Menu = reader.GetInt32(0),
+                            Nome = reader.GetString(1)
+                        };
+                        ristoranteDettagli.Menus.Add(menu);
+                    }
+                }
+            }
+            foreach (var menu in ristoranteDettagli.Menus)
+            {
+                string piattiQuery = @"
+            SELECT p.ID_Piatto, p.Nome, p.Descrizione, p.Prezzo, p.ImmaginePath
+            FROM Piatti p
+            WHERE p.ID_Menu = @ID_Menu AND p.Cancellato = 0";
+
+                using (SqlCommand cmd = new SqlCommand(piattiQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ID_Menu", menu.ID_Menu);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var piatto = new Piatto
+                            {
+                                ID_Piatto = reader.GetInt32(0),
+                                Nome = reader.GetString(1),
+                                Descrizione = reader.GetString(2),
+                                Prezzo = reader.GetDecimal(3),
+                                ImmaginePath = reader.IsDBNull(4) ? null : reader.GetString(4)
+                            };
+                            menu.Piatti.Add(piatto);
+                        }
+                    }
+                }
+            }
+            string promozioniQuery = @"
+        SELECT ID_Promozione, Descrizione, DataInizio, DataFine, ScontoPercentuale
+        FROM Promozioni
+        WHERE ID_Ristorante = @ID_Ristorante";
+
+            using (SqlCommand cmd = new SqlCommand(promozioniQuery, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var promozione = new Promozione
+                        {
+                            ID_Promozione = reader.GetInt32(0),
+                            Descrizione = reader.GetString(1),
+                            DataInizio = reader.GetDateTime(2),
+                            DataFine = reader.GetDateTime(3),
+                            ScontoPercentuale = reader.GetDecimal(4)
+                        };
+                        ristoranteDettagli.Promozioni.Add(promozione);
+                    }
+                }
+            }
+            string categorieQuery = @"
+        SELECT c.ID_Categoria, c.Nome
+        FROM RistoranteCategorie rc
+        JOIN CategorieRistoranti c ON rc.ID_Categoria = c.ID_Categoria
+        WHERE rc.ID_Ristorante = @ID_Ristorante";
+
+            using (SqlCommand cmd = new SqlCommand(categorieQuery, conn))
+            {
+                cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var categoria = new Categoria
+                        {
+                            ID_Categoria = reader.GetInt32(0),
+                            Nome = reader.GetString(1)
+                        };
+                        ristoranteDettagli.Categorie.Add(categoria);
+                    }
+                }
+            }
+        }
+
+        return ristoranteDettagli;
+    }
 
 
 }

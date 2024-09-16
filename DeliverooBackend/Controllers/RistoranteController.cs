@@ -382,6 +382,16 @@ namespace DeliverooBackend.Controllers
         }
 
 
+        [HttpGet("get-ristorante-dettagli/{idRistorante}")]
+        public IActionResult GetRistoranteDettagli(int idRistorante)
+        {
+            var ristoranteDettagli = _ristoranteService.GetRistoranteDettagli(idRistorante);
+            if (ristoranteDettagli == null)
+            {
+                return NotFound();
+            }
+            return Ok(ristoranteDettagli);
+        }
 
 
     }
