@@ -52,6 +52,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services
+    .AddScoped<OrdineService>()
     .AddScoped<RistoranteService>()
     .AddScoped<UtenteService>();
 var app = builder.Build();
