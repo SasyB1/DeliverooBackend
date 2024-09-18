@@ -135,6 +135,7 @@ namespace DeliverooBackend.Services
             p.Descrizione AS DescrizionePiatto,
             p.Prezzo AS PrezzoPiatto,
             do.Quantità AS QuantitàPiatto,
+p.ConsenteIngredienti,
             i.ID_Ingrediente,
             i.Nome AS NomeIngrediente,
             i.Prezzo AS PrezzoIngrediente,
@@ -211,7 +212,35 @@ namespace DeliverooBackend.Services
             return ordini;
         }
 
+        public async Task<List<Ingrediente>> GetAllIngredienti()
+        {
+            var ingredienti = new List<Ingrediente>();
 
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+                string query = "SELECT ID_Ingrediente, Nome, Prezzo FROM Ingredienti";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var ingrediente = new Ingrediente
+                            {
+                                ID_Ingrediente = reader.GetInt32(0),
+                                Nome = reader.GetString(1),
+                                Prezzo = reader.GetDecimal(2)
+                            };
+                            ingredienti.Add(ingrediente);
+                        }
+                    }
+                }
+            }
+
+            return ingredienti;
+        }
 
     }
 }

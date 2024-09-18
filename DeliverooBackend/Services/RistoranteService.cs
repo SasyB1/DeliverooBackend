@@ -39,7 +39,7 @@ public class RistoranteService
         {
             conn.Open();
             string query = "SELECT ID_Ristorante, Nome, Indirizzo, Telefono, Email, Latitudine, Longitudine, ImmaginePath " +
-                           "FROM Ristoranti WHERE Cancellato = 0"; 
+                           "FROM Ristoranti WHERE Cancellato = 0";
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
                 using (SqlDataReader reader = cmd.ExecuteReader())
@@ -263,7 +263,7 @@ public class RistoranteService
                         {
                             var orarioApertura = new OrarioApertura
                             {
-                                ID_OrarioApertura = reader.GetInt32(8), 
+                                ID_OrarioApertura = reader.GetInt32(8),
                                 GiornoSettimana = reader.GetInt32(9),
                                 OraApertura = reader.GetTimeSpan(10),
                                 OraChiusura = reader.GetTimeSpan(11)
@@ -322,7 +322,7 @@ public class RistoranteService
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             await conn.OpenAsync();
-            string query = "INSERT INTO Piatti (Nome, Descrizione, Prezzo, ID_Menu, ImmaginePath) VALUES (@Nome, @Descrizione, @Prezzo, @ID_Menu, @ImmaginePath)";
+            string query = "INSERT INTO Piatti (Nome, Descrizione, Prezzo, ID_Menu, ImmaginePath,ConsenteIngredienti) VALUES (@Nome, @Descrizione, @Prezzo, @ID_Menu, @ImmaginePath,@ConsenteIngredienti)";
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
                 cmd.Parameters.AddWithValue("@Nome", piatto.Nome);
@@ -330,6 +330,7 @@ public class RistoranteService
                 cmd.Parameters.AddWithValue("@Prezzo", piatto.Prezzo);
                 cmd.Parameters.AddWithValue("@ID_Menu", piatto.ID_Menu);
                 cmd.Parameters.AddWithValue("@ImmaginePath", (object)piatto.ImmaginePath ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@ConsenteIngredienti", piatto.ConsenteIngredienti);
                 await cmd.ExecuteNonQueryAsync();
             }
         }
@@ -371,7 +372,11 @@ public class RistoranteService
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             conn.Open();
-            string query = "SELECT ID_Piatto, Nome, Descrizione, Prezzo, ImmaginePath, Cancellato FROM Piatti WHERE ID_Menu = @ID_Menu";
+            string query = @"
+            SELECT ID_Piatto, Nome, Descrizione, Prezzo, ImmaginePath, Cancellato, ConsenteIngredienti
+            FROM Piatti
+            WHERE ID_Menu = @ID_Menu AND Cancellato = 0"; 
+
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
                 cmd.Parameters.AddWithValue("@ID_Menu", idMenu);
@@ -386,7 +391,8 @@ public class RistoranteService
                             Descrizione = reader.GetString(2),
                             Prezzo = reader.GetDecimal(3),
                             ImmaginePath = reader.IsDBNull(4) ? null : reader.GetString(4),
-                            Cancellato = reader.IsDBNull(5) ? false : reader.GetBoolean(5)
+                            Cancellato = reader.GetBoolean(5),
+                            ConsenteIngredienti = reader.GetBoolean(6)  
                         };
                         piatti.Add(piatto);
                     }
@@ -395,6 +401,7 @@ public class RistoranteService
         }
         return piatti;
     }
+
 
 
     public async Task AggiornaCategorieRistorante(int idRistorante, List<int> selectedCategories)
@@ -555,7 +562,7 @@ public class RistoranteService
         }
     }
 
-    public async Task<bool> AggiornaPiatto(int idPiatto, string nome, string descrizione, decimal prezzo, IFormFile immagine)
+    public async Task<bool> AggiornaPiatto(int idPiatto, string nome, string descrizione, decimal prezzo, bool consenteIngredienti, IFormFile immagine)
     {
         string immaginePath = null;
 
@@ -584,7 +591,7 @@ public class RistoranteService
                     await immagine.CopyToAsync(fileStream);
                 }
 
-                immaginePath = "/uploads/" + fileName; 
+                immaginePath = "/uploads/" + fileName;
 
                 Console.WriteLine($"Nuova immagine salvata in: {immaginePath}");
             }
@@ -594,8 +601,8 @@ public class RistoranteService
             }
             string query = @"
             UPDATE Piatti
-            SET Nome = @Nome, Descrizione = @Descrizione, Prezzo = @Prezzo, ImmaginePath = @ImmaginePath
-            WHERE ID_Piatto = @ID_Piatto";
+SET Nome = @Nome, Descrizione = @Descrizione, Prezzo = @Prezzo, ImmaginePath = @ImmaginePath, ConsenteIngredienti = @ConsenteIngredienti
+WHERE ID_Piatto = @ID_Piatto";
 
             using (SqlCommand cmd = new SqlCommand(query, conn))
             {
@@ -603,6 +610,7 @@ public class RistoranteService
                 cmd.Parameters.AddWithValue("@Descrizione", descrizione);
                 cmd.Parameters.AddWithValue("@Prezzo", prezzo);
                 cmd.Parameters.AddWithValue("@ImmaginePath", immaginePath);
+                cmd.Parameters.AddWithValue("@ConsenteIngredienti", consenteIngredienti);
                 cmd.Parameters.AddWithValue("@ID_Piatto", idPiatto);
 
                 int rowsAffected = await cmd.ExecuteNonQueryAsync();
@@ -834,7 +842,7 @@ public class RistoranteService
             foreach (var menu in ristoranteDettagli.Menus)
             {
                 string piattiQuery = @"
-            SELECT p.ID_Piatto, p.Nome, p.Descrizione, p.Prezzo, p.ImmaginePath
+            SELECT p.ID_Piatto, p.Nome, p.Descrizione, p.Prezzo, p.ImmaginePath, p.ConsenteIngredienti
             FROM Piatti p
             WHERE p.ID_Menu = @ID_Menu AND p.Cancellato = 0";
 
@@ -851,7 +859,8 @@ public class RistoranteService
                                 Nome = reader.GetString(1),
                                 Descrizione = reader.GetString(2),
                                 Prezzo = reader.GetDecimal(3),
-                                ImmaginePath = reader.IsDBNull(4) ? null : reader.GetString(4)
+                                ImmaginePath = reader.IsDBNull(4) ? null : reader.GetString(4),
+                                ConsenteIngredienti = reader.GetBoolean(5)
                             };
                             menu.Piatti.Add(piatto);
                         }

@@ -100,7 +100,8 @@ namespace DeliverooBackend.Controllers
             }
         }
         [HttpPost("create-piatto")]
-        public async Task<IActionResult> CreatePiatto([FromForm] string nome, [FromForm] string descrizione, [FromForm] decimal prezzo, [FromForm] int idMenu, [FromForm] IFormFile immagine)
+        public async Task<IActionResult> CreatePiatto([FromForm] string nome, [FromForm] string descrizione, [FromForm] decimal prezzo,
+                                               [FromForm] int idMenu, [FromForm] bool consenteIngredienti, [FromForm] IFormFile immagine)
         {
             if (string.IsNullOrEmpty(nome) || string.IsNullOrEmpty(descrizione) || prezzo <= 0)
             {
@@ -112,7 +113,8 @@ namespace DeliverooBackend.Controllers
                 Nome = nome,
                 Descrizione = descrizione,
                 Prezzo = prezzo,
-                ID_Menu = idMenu
+                ID_Menu = idMenu,
+                ConsenteIngredienti = consenteIngredienti 
             };
 
             try
@@ -125,6 +127,7 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(500, $"Errore interno del server: {ex.Message}");
             }
         }
+
 
 
         [HttpGet("get-menus/{idRistorante}")]
@@ -265,10 +268,10 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(500, new { message = "Errore interno del server.", error = ex.Message });
             }
         }
-
         [HttpPut("update-piatto")]
-        public async Task<IActionResult> AggiornaPiatto([FromForm] int idPiatto, [FromForm] string nome, [FromForm] string descrizione,
-                                                  [FromForm] decimal prezzo, [FromForm] IFormFile immagine = null) 
+        public async Task<IActionResult> UpdatePiatto([FromForm] int idPiatto, [FromForm] string nome,
+                                              [FromForm] string descrizione, [FromForm] decimal prezzo,
+                                              [FromForm] bool consenteIngredienti, [FromForm] IFormFile immagine = null)
         {
             if (string.IsNullOrEmpty(nome) || string.IsNullOrEmpty(descrizione) || prezzo <= 0)
             {
@@ -277,7 +280,7 @@ namespace DeliverooBackend.Controllers
 
             try
             {
-                bool success = await _ristoranteService.AggiornaPiatto(idPiatto, nome, descrizione, prezzo, immagine);
+                bool success = await _ristoranteService.AggiornaPiatto(idPiatto, nome, descrizione, prezzo, consenteIngredienti, immagine);
 
                 if (success)
                 {

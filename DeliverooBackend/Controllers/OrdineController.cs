@@ -55,7 +55,7 @@ namespace DeliverooBackend.Controllers
         [HttpPost("aggiungi-ingrediente-dettaglio-ordine")]
         public async Task<IActionResult> AggiungiIngredienteADettaglioOrdine([FromForm] int idDettaglioOrdine, [FromForm] int idIngrediente, [FromForm] int quantitaIngrediente)
         {
-            if (idDettaglioOrdine <= 0 || idIngrediente <= 0 || quantitaIngrediente <= 0 )
+            if (idDettaglioOrdine <= 0 || idIngrediente <= 0 || quantitaIngrediente <= 0)
             {
                 return BadRequest("Dati non validi.");
             }
@@ -80,6 +80,20 @@ namespace DeliverooBackend.Controllers
                 return NotFound("Nessun ordine trovato per l'utente.");
             }
             return Ok(ordini);
+        }
+
+        [HttpGet("get-ingredienti")]
+        public async Task<IActionResult> GetAllIngredienti()
+        {
+            try
+            {
+                var ingredienti = await _ordineService.GetAllIngredienti();
+                return Ok(ingredienti);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Errore interno del server: {ex.Message}");
+            }
         }
     }
 }
