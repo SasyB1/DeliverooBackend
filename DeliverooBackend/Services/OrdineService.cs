@@ -126,6 +126,7 @@ namespace DeliverooBackend.Services
             o.ID_Ordine,
             o.DataOrdine,
             o.Stato,
+            o.ID_Utente,  -- Aggiunto ID_Utente alla query
             r.ID_Ristorante,
             r.Nome AS NomeRistorante,
             r.Indirizzo AS IndirizzoRistorante,
@@ -135,7 +136,7 @@ namespace DeliverooBackend.Services
             p.Descrizione AS DescrizionePiatto,
             p.Prezzo AS PrezzoPiatto,
             do.Quantità AS QuantitàPiatto,
-p.ConsenteIngredienti,
+            p.ConsenteIngredienti,
             i.ID_Ingrediente,
             i.Nome AS NomeIngrediente,
             i.Prezzo AS PrezzoIngrediente,
@@ -160,8 +161,10 @@ p.ConsenteIngredienti,
                         while (reader.Read())
                         {
                             int idOrdine = reader.GetInt32(0);
-                            int idDettaglioOrdine = reader.GetInt32(6);
-                            int idPiatto = reader.GetInt32(7);
+                            int idDettaglioOrdine = reader.GetInt32(7);
+                            int idPiatto = reader.GetInt32(8);
+
+                            
                             if (ordineCorrente == null || ordineCorrente.ID_Ordine != idOrdine)
                             {
                                 ordineCorrente = new Ordine
@@ -169,11 +172,13 @@ p.ConsenteIngredienti,
                                     ID_Ordine = idOrdine,
                                     DataOrdine = reader.GetDateTime(1),
                                     Stato = reader.GetString(2),
-                                    ID_Ristorante = reader.GetInt32(3), 
+                                    ID_Utente = reader.GetInt32(3),  
+                                    ID_Ristorante = reader.GetInt32(4),
                                     DettagliOrdine = new List<DettaglioOrdine>()
                                 };
                                 ordini.Add(ordineCorrente);
                             }
+
                             if (dettaglioCorrente == null || dettaglioCorrente.ID_DettaglioOrdine != idDettaglioOrdine)
                             {
                                 dettaglioCorrente = new DettaglioOrdine
@@ -183,24 +188,25 @@ p.ConsenteIngredienti,
                                     Piatto = new Piatto
                                     {
                                         ID_Piatto = idPiatto,
-                                        Nome = reader.GetString(8),
-                                        Descrizione = reader.GetString(9),
-                                        Prezzo = reader.GetDecimal(10)
+                                        Nome = reader.GetString(9),
+                                        Descrizione = reader.GetString(10),
+                                        Prezzo = reader.GetDecimal(11)
                                     },
-                                    Quantita = reader.GetInt32(11),
-                                    Prezzo = reader.GetDecimal(10) * reader.GetInt32(11), 
+                                    Quantita = reader.GetInt32(12),
+                                    Prezzo = reader.GetDecimal(11) * reader.GetInt32(12),
                                     Ingredienti = new List<IngredienteDettaglio>()
                                 };
                                 ordineCorrente.DettagliOrdine.Add(dettaglioCorrente);
                             }
-                            if (!reader.IsDBNull(12)) 
+
+                            if (!reader.IsDBNull(13))
                             {
                                 var ingrediente = new IngredienteDettaglio
                                 {
-                                    ID_Ingrediente = reader.GetInt32(12),
-                                    Nome = reader.GetString(13),
-                                    Prezzo = reader.GetDecimal(14),
-                                    Quantita = reader.IsDBNull(15) ? 0 : reader.GetInt32(15)
+                                    ID_Ingrediente = reader.GetInt32(14),
+                                    Nome = reader.GetString(15),
+                                    Prezzo = reader.GetDecimal(16),
+                                    Quantita = reader.IsDBNull(17) ? 0 : reader.GetInt32(17)
                                 };
                                 dettaglioCorrente.Ingredienti.Add(ingrediente);
                             }
@@ -211,6 +217,7 @@ p.ConsenteIngredienti,
 
             return ordini;
         }
+
 
         public async Task<List<Ingrediente>> GetAllIngredienti()
         {
