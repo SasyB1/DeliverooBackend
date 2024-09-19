@@ -126,7 +126,7 @@ namespace DeliverooBackend.Services
             o.ID_Ordine,
             o.DataOrdine,
             o.Stato,
-            o.ID_Utente,  -- Aggiunto ID_Utente alla query
+            o.ID_Utente,  
             r.ID_Ristorante,
             r.Nome AS NomeRistorante,
             r.Indirizzo AS IndirizzoRistorante,
