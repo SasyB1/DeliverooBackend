@@ -136,6 +136,32 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(500, $"Errore interno del server: {ex.Message}");
             }
         }
+
+        [HttpGet("get-ordini-ristorante/{idRistorante}")]
+        public async Task<IActionResult> GetOrdiniByRistorante(int idRistorante)
+        {
+            if (idRistorante <= 0)
+            {
+                return BadRequest("ID ristorante non valido.");
+            }
+
+            try
+            {
+                var ordini = await _ordineService.GetOrdiniByRistorante(idRistorante);
+                if (ordini == null || !ordini.Any())
+                {
+                    return NotFound("Nessun ordine trovato per questo ristorante.");
+                }
+
+                return Ok(ordini);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Errore interno del server: {ex.Message}");
+            }
+        }
+
+
         [HttpPut("cambia-stato-ordine")]
         public async Task<IActionResult> CambiaStatoOrdine([FromForm] int idOrdine, [FromForm] string nuovoStato)
         {

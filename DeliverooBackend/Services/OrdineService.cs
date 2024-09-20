@@ -325,6 +325,77 @@ namespace DeliverooBackend.Services
 
             return recensioni;
         }
+        public async Task<List<Ordine>> GetOrdiniByRistorante(int idRistorante)
+        {
+            var ordini = new List<Ordine>();
+
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+
+                string query = @"
+        SELECT 
+            o.ID_Ordine,
+            o.DataOrdine,
+            o.Stato,
+            o.ID_Utente,  
+            o.ID_Ristorante,  
+            r.Nome AS NomeRistorante,
+            do.ID_DettaglioOrdine,
+            p.Nome AS NomePiatto,
+            p.Prezzo AS PrezzoPiatto,
+            do.Quantità AS QuantitàPiatto
+        FROM Ordini o
+        JOIN Ristoranti r ON o.ID_Ristorante = r.ID_Ristorante
+        JOIN DettagliOrdine do ON o.ID_Ordine = do.ID_Ordine
+        JOIN Piatti p ON do.ID_Piatto = p.ID_Piatto
+        WHERE o.ID_Ristorante = @ID_Ristorante";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+                        Ordine ordineCorrente = null;
+
+                        while (await reader.ReadAsync())
+                        {
+                            int idOrdine = reader.GetInt32(0);
+                            if (ordineCorrente == null || ordineCorrente.ID_Ordine != idOrdine)
+                            {
+                                ordineCorrente = new Ordine
+                                {
+                                    ID_Ordine = idOrdine,
+                                    DataOrdine = reader.GetDateTime(1),
+                                    Stato = reader.GetString(2),
+                                    ID_Utente = reader.GetInt32(3),
+                                    ID_Ristorante = reader.GetInt32(4),
+                                    NomeRistorante = reader.GetString(5),
+                                    DettagliOrdine = new List<DettaglioOrdine>()
+                                };
+                                ordini.Add(ordineCorrente);
+                            }
+
+                            var dettaglioOrdine = new DettaglioOrdine
+                            {
+                                ID_DettaglioOrdine = reader.GetInt32(6),
+                                Piatto = new Piatto
+                                {
+                                    Nome = reader.GetString(7),
+                                    Prezzo = reader.GetDecimal(8)
+                                },
+                                Quantita = reader.GetInt32(9)
+                            };
+
+                            ordineCorrente.DettagliOrdine.Add(dettaglioOrdine);
+                        }
+                    }
+                }
+            }
+
+            return ordini;
+        }
 
         public async Task CambiaStatoOrdine(int idOrdine, string nuovoStato)
         {
