@@ -31,7 +31,7 @@ namespace DeliverooBackend.Services
                     cmd.Parameters.AddWithValue("@Stato", "In Corso");
 
                     var result = await cmd.ExecuteScalarAsync();
-                    return Convert.ToInt32(result);  
+                    return Convert.ToInt32(result);
                 }
             }
         }
@@ -56,7 +56,7 @@ namespace DeliverooBackend.Services
                         throw new Exception("Piatto non trovato nel database.");
                     }
 
-                    prezzoPiatto = (decimal)result;  
+                    prezzoPiatto = (decimal)result;
                 }
 
                 string query = @"
@@ -68,7 +68,7 @@ namespace DeliverooBackend.Services
                     cmd.Parameters.AddWithValue("@ID_Ordine", idOrdine);
                     cmd.Parameters.AddWithValue("@ID_Piatto", idPiatto);
                     cmd.Parameters.AddWithValue("@Quantità", quantita);
-                    cmd.Parameters.AddWithValue("@Prezzo", prezzoPiatto * quantita);  
+                    cmd.Parameters.AddWithValue("@Prezzo", prezzoPiatto * quantita);
 
                     await cmd.ExecuteNonQueryAsync();
                 }
@@ -77,7 +77,7 @@ namespace DeliverooBackend.Services
 
 
 
-      
+
         public async Task AggiungiIngredienteADettaglioOrdine(int idDettaglioOrdine, int idIngrediente, int quantitaIngrediente)
         {
             using (SqlConnection conn = new SqlConnection(_connectionString))
@@ -106,7 +106,7 @@ namespace DeliverooBackend.Services
                     cmd.Parameters.AddWithValue("@ID_DettaglioOrdine", idDettaglioOrdine);
                     cmd.Parameters.AddWithValue("@ID_Ingrediente", idIngrediente);
                     cmd.Parameters.AddWithValue("@QuantitàIngrediente", quantitaIngrediente);
-                    cmd.Parameters.AddWithValue("@PrezzoIngrediente", prezzoIngrediente * quantitaIngrediente); 
+                    cmd.Parameters.AddWithValue("@PrezzoIngrediente", prezzoIngrediente * quantitaIngrediente);
 
                     await cmd.ExecuteNonQueryAsync();
                 }
@@ -164,7 +164,7 @@ namespace DeliverooBackend.Services
                             int idDettaglioOrdine = reader.GetInt32(7);
                             int idPiatto = reader.GetInt32(8);
 
-                            
+
                             if (ordineCorrente == null || ordineCorrente.ID_Ordine != idOrdine)
                             {
                                 ordineCorrente = new Ordine
@@ -172,7 +172,7 @@ namespace DeliverooBackend.Services
                                     ID_Ordine = idOrdine,
                                     DataOrdine = reader.GetDateTime(1),
                                     Stato = reader.GetString(2),
-                                    ID_Utente = reader.GetInt32(3),  
+                                    ID_Utente = reader.GetInt32(3),
                                     ID_Ristorante = reader.GetInt32(4),
                                     DettagliOrdine = new List<DettaglioOrdine>()
                                 };
@@ -247,6 +247,74 @@ namespace DeliverooBackend.Services
             }
 
             return ingredienti;
+        }
+
+        public async Task AggiungiRecensione(int idOrdine, int idRistorante, int idUtente, int valutazione, string commento)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+
+                string query = @"
+            INSERT INTO RecensioniRistoranti (ID_Ordine, ID_Ristorante, ID_Utente, Valutazione, Commento, DataRecensione)
+            VALUES (@ID_Ordine, @ID_Ristorante, @ID_Utente, @Valutazione, @Commento, @DataRecensione)";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ID_Ordine", idOrdine);
+                    cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+                    cmd.Parameters.AddWithValue("@ID_Utente", idUtente);
+                    cmd.Parameters.AddWithValue("@Valutazione", valutazione);
+                    cmd.Parameters.AddWithValue("@Commento", string.IsNullOrEmpty(commento) ? DBNull.Value : (object)commento);
+                    cmd.Parameters.AddWithValue("@DataRecensione", DateTime.Now);
+
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+        }
+        public async Task<List<Recensione>> GetRecensioniByRistorante(int idRistorante)
+        {
+            var recensioni = new List<Recensione>();
+
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+                string query = @"
+            SELECT 
+                r.ID_Recensione,
+                r.ID_Utente,
+                u.Nome AS NomeUtente,
+                r.Valutazione,
+                r.Commento,
+                r.DataRecensione
+            FROM RecensioniRistoranti r
+            JOIN Utenti u ON r.ID_Utente = u.ID_Utente
+            WHERE r.ID_Ristorante = @ID_Ristorante";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ID_Ristorante", idRistorante);
+
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var recensione = new Recensione
+                            {
+                                ID_Recensione = reader.GetInt32(0),
+                                ID_Utente = reader.GetInt32(1),
+                                NomeUtente = reader.GetString(2),
+                                Valutazione = reader.GetInt32(3),
+                                Commento = reader.IsDBNull(4) ? null : reader.GetString(4),
+                                DataRecensione = reader.GetDateTime(5)
+                            };
+                            recensioni.Add(recensione);
+                        }
+                    }
+                }
+            }
+
+            return recensioni;
         }
 
     }

@@ -95,5 +95,47 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(500, $"Errore interno del server: {ex.Message}");
             }
         }
+
+        [HttpPost("aggiungi-recensione")]
+        public async Task<IActionResult> AggiungiRecensione([FromForm] int idOrdine, [FromForm] int idRistorante, [FromForm] int idUtente, [FromForm] int valutazione, [FromForm] string commento)
+        {
+            if (idOrdine <= 0 || idRistorante <= 0 || idUtente <= 0 || valutazione < 1 || valutazione > 5)
+            {
+                return BadRequest("Dati non validi.");
+            }
+
+            try
+            {
+                await _ordineService.AggiungiRecensione(idOrdine, idRistorante, idUtente, valutazione, commento);
+                return Ok(new { message = "Recensione aggiunta con successo." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Errore interno del server: {ex.Message}");
+            }
+        }
+        [HttpGet("recensioni/{idRistorante}")]
+        public async Task<IActionResult> GetRecensioniByRistorante(int idRistorante)
+        {
+            if (idRistorante <= 0)
+            {
+                return BadRequest("ID ristorante non valido.");
+            }
+
+            try
+            {
+                var recensioni = await _ordineService.GetRecensioniByRistorante(idRistorante);
+                if (recensioni == null || !recensioni.Any())
+                {
+                    return NotFound("Nessuna recensione trovata per questo ristorante.");
+                }
+                return Ok(recensioni);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Errore interno del server: {ex.Message}");
+            }
+        }
+
     }
 }
