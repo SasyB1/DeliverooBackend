@@ -160,22 +160,22 @@ namespace DeliverooBackend.Services
 
                         while (reader.Read())
                         {
-                            int idOrdine = reader.GetInt32(0); 
-                            int idDettaglioOrdine = reader.GetInt32(7); 
-                            int idPiatto = reader.GetInt32(8); 
+                            int idOrdine = reader.GetInt32(0);
+                            int idDettaglioOrdine = reader.GetInt32(7);
+                            int idPiatto = reader.GetInt32(8);
 
-                            
+
                             if (ordineCorrente == null || ordineCorrente.ID_Ordine != idOrdine)
                             {
                                 ordineCorrente = new Ordine
                                 {
                                     ID_Ordine = idOrdine,
-                                    DataOrdine = reader.GetDateTime(1), 
-                                    Stato = reader.GetString(2), 
-                                    ID_Utente = reader.GetInt32(3), 
-                                    ID_Ristorante = reader.GetInt32(4), 
+                                    DataOrdine = reader.GetDateTime(1),
+                                    Stato = reader.GetString(2),
+                                    ID_Utente = reader.GetInt32(3),
+                                    ID_Ristorante = reader.GetInt32(4),
 
-                                    
+
                                     NomeRistorante = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
 
                                     DettagliOrdine = new List<DettaglioOrdine>()
@@ -183,7 +183,7 @@ namespace DeliverooBackend.Services
                                 ordini.Add(ordineCorrente);
                             }
 
-                           
+
                             if (dettaglioCorrente == null || dettaglioCorrente.ID_DettaglioOrdine != idDettaglioOrdine)
                             {
                                 dettaglioCorrente = new DettaglioOrdine
@@ -191,30 +191,30 @@ namespace DeliverooBackend.Services
                                     ID_DettaglioOrdine = idDettaglioOrdine,
                                     ID_Ordine = idOrdine,
 
-                                    
+
                                     Piatto = new Piatto
                                     {
                                         ID_Piatto = idPiatto,
-                                        Nome = reader.GetString(9), 
-                                        Descrizione = reader.GetString(10), 
-                                        Prezzo = reader.GetDecimal(11) 
+                                        Nome = reader.GetString(9),
+                                        Descrizione = reader.GetString(10),
+                                        Prezzo = reader.GetDecimal(11)
                                     },
-                                    Quantita = reader.GetInt32(12), 
+                                    Quantita = reader.GetInt32(12),
                                     Prezzo = reader.GetDecimal(11) * reader.GetInt32(12),
                                     Ingredienti = new List<IngredienteDettaglio>()
                                 };
                                 ordineCorrente.DettagliOrdine.Add(dettaglioCorrente);
                             }
 
-                            
+
                             if (!reader.IsDBNull(13))
                             {
                                 var ingrediente = new IngredienteDettaglio
                                 {
-                                    ID_Ingrediente = !reader.IsDBNull(14) ? reader.GetInt32(14) : 0, 
-                                    Nome = !reader.IsDBNull(15) ? reader.GetString(15) : string.Empty, 
-                                    Prezzo = !reader.IsDBNull(16) ? reader.GetDecimal(16) : 0, 
-                                    Quantita = !reader.IsDBNull(17) ? reader.GetInt32(17) : 0 
+                                    ID_Ingrediente = !reader.IsDBNull(14) ? reader.GetInt32(14) : 0,
+                                    Nome = !reader.IsDBNull(15) ? reader.GetString(15) : string.Empty,
+                                    Prezzo = !reader.IsDBNull(16) ? reader.GetDecimal(16) : 0,
+                                    Quantita = !reader.IsDBNull(17) ? reader.GetInt32(17) : 0
                                 };
                                 dettaglioCorrente.Ingredienti.Add(ingrediente);
                             }
@@ -324,6 +324,32 @@ namespace DeliverooBackend.Services
             }
 
             return recensioni;
+        }
+
+        public async Task CambiaStatoOrdine(int idOrdine, string nuovoStato)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+
+                string query = @"
+        UPDATE Ordini
+        SET Stato = @NuovoStato
+        WHERE ID_Ordine = @ID_Ordine";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ID_Ordine", idOrdine);
+                    cmd.Parameters.AddWithValue("@NuovoStato", nuovoStato);
+
+                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                    if (rowsAffected == 0)
+                    {
+                        throw new Exception("Ordine non trovato o nessun aggiornamento applicato.");
+                    }
+                }
+            }
         }
 
     }

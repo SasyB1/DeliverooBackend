@@ -136,6 +136,24 @@ namespace DeliverooBackend.Controllers
                 return StatusCode(500, $"Errore interno del server: {ex.Message}");
             }
         }
+        [HttpPut("cambia-stato-ordine")]
+        public async Task<IActionResult> CambiaStatoOrdine([FromForm] int idOrdine, [FromForm] string nuovoStato)
+        {
+            if (idOrdine <= 0 || string.IsNullOrEmpty(nuovoStato))
+            {
+                return BadRequest("Dati non validi.");
+            }
+
+            try
+            {
+                await _ordineService.CambiaStatoOrdine(idOrdine, nuovoStato);
+                return Ok(new { message = "Stato dell'ordine aggiornato con successo." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Errore interno del server: {ex.Message}");
+            }
+        }
 
     }
 }
